@@ -1,4 +1,4 @@
-package edge.src;
+package edge.src.model;
 
 import device.src.model.ClimateRecord;
 

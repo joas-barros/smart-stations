@@ -1,6 +1,7 @@
-package edge.src;
+package edge.src.service;
 
 import device.src.model.ClimateRecord;
+import edge.src.model.LocalDatabase;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;

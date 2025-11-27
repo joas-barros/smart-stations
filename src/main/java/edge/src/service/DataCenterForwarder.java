@@ -1,4 +1,4 @@
-package edge.src;
+package edge.src.service;
 
 import datacenter.src.DataCenterServer;
 import device.src.model.ClimateRecord;
@@ -6,7 +6,6 @@ import device.src.model.ClimateRecord;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.DatagramSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 

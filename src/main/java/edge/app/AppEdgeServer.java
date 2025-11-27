@@ -1,6 +1,6 @@
 package edge.app;
 
-import edge.src.EdgeServer;
+import edge.src.service.EdgeServer;
 
 public class AppEdgeServer {
     static void main() {
