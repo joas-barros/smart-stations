@@ -15,16 +15,20 @@ public class EdgeServer {
     private static final int EDGE_PORT = 9090;
     private static final int BUFFER_SIZE = 4096;
 
-    private static final double MAX_TEMP = 42.0;    // Alerta de calor extremo/incêndio
-    private static final double MAX_CO2 = 1000.0;   // Má qualidade do ar
-    private static final double MAX_UV = 10.0;      // Radiação UV extrema
-    private static final double MAX_NOISE = 90.0;   // Poluição sonora grave
+    private static final double MAX_TEMP = 42.0;
+    private static final double MAX_CO2 = 1000.0;
+    private static final double MAX_UV = 10.0;
+    private static final double MAX_NOISE = 90.0;
+
+    private static LocalDatabase database;
 
     public EdgeServer() {
         this.run();
     }
 
     public void run() {
+        database = new LocalDatabase();
+
         System.out.println("Servidor de Borda rodando na porta UDP: " + EDGE_PORT);
 
         try (DatagramSocket socket = new DatagramSocket(EDGE_PORT)){
@@ -73,6 +77,8 @@ public class EdgeServer {
         if (record.getUrbanNoise() > MAX_NOISE) {
             System.out.println("  [ALERTA] (Poluição sonora grave) Nível de ruído alto detectado em " + record.getLocation() + ": " + df.format(record.getUrbanNoise()) + " dB");
         }
+
+        database.insert(record);
 
         forwardToDataCenter(record);
     }
