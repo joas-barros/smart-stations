@@ -20,6 +20,7 @@ public class AuthService {
 
     public AuthService(int port) {
         this.port = port;
+        this.run();
     }
 
     private void run() {
