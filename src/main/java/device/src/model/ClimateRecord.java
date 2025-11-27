@@ -8,8 +8,10 @@ public class ClimateRecord implements Serializable {
 
     private Long id;
 
+    // dados do sipositivo
     private String deviceId;
     private LocalDateTime timeStamp;
+    private String location;
 
     // Gases (unidade ppm - partes por milhão)
     // Gases (Geralmente em ppm - partes por milhão)
@@ -34,9 +36,10 @@ public class ClimateRecord implements Serializable {
         this.timeStamp = LocalDateTime.now();
     }
 
-    public ClimateRecord(Long id, String deviceId, Double carbonDioxide, Double carbonMonoxide, Double nitrogenDioxide, Double sulfurDioxide, Double pm25, Double humidity, Double pm10, Double temperature, Double urbanNoise, Double uvRadiation) {
+    public ClimateRecord(Long id, String deviceId, String location, Double carbonDioxide, Double carbonMonoxide, Double nitrogenDioxide, Double sulfurDioxide, Double pm25, Double humidity, Double pm10, Double temperature, Double urbanNoise, Double uvRadiation) {
         this.id = id;
         this.deviceId = deviceId;
+        this.location = location;
         this.timeStamp = LocalDateTime.now();
         this.carbonDioxide = carbonDioxide;
         this.carbonMonoxide = carbonMonoxide;
@@ -171,5 +174,13 @@ public class ClimateRecord implements Serializable {
                 ", urbanNoise=" + urbanNoise +
                 ", uvRadiation=" + uvRadiation +
                 '}';
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
     }
 }
