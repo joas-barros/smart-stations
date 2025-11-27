@@ -47,6 +47,7 @@ public class EdgeServer {
 
                     processRecord(record);
                 } catch (ClassNotFoundException e) {
+
                     System.err.println("Erro ao desserializar o registro climático: " + e.getMessage());
                 }
             }
@@ -84,19 +85,7 @@ public class EdgeServer {
     }
 
     private void forwardToDataCenter(ClimateRecord record) {
-        // Simulação de latência de rede para a nuvem
-        new Thread(() -> {
-            try {
-                // Aqui entraria o código: Socket tcpDataCenter = new Socket("ip-datacenter", porta);
-                // ObjectOutputStream out = new ObjectOutputStream(tcpDataCenter.getOutputStream());
-                // out.writeObject(record);
-
-                // Apenas simulando o processamento de envio
-                Thread.sleep(100);
-                System.out.println("   [CLOUD] ☁️ Registro " + record.getId() + " sincronizado com o Data Center.");
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }).start();
+        DataCenterForwarder task = new DataCenterForwarder(record);
+        new Thread(task).start();
     }
 }
