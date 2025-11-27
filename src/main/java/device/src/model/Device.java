@@ -53,7 +53,7 @@ public class Device implements Runnable{
                  BufferedReader in = new BufferedReader(new InputStreamReader(authSocket.getInputStream()))) {
 
                 // Envia ID do dispositivo para autenticar
-                out.println("DEVICE");
+                out.println("GET EDGE");
 
                 // Recebe a porta do Servidor de Borda (UDP)
                 String response = in.readLine();
