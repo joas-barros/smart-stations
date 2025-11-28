@@ -117,4 +117,22 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
         List<ClimateRecord> data = databaseService.getRecords();
         return aiService.generateHealthAlerts(data);
     }
+
+    @Override
+    public String getNoisePollutionReport() throws RemoteException {
+        List<ClimateRecord> data = databaseService.getRecords();
+        return aiService.generateNoisePollutionReport(data);
+    }
+
+    @Override
+    public String generateThermalComfortReport() throws RemoteException {
+        List<ClimateRecord> data = databaseService.getRecords();
+        return aiService.generateThermalComfortReport(data);
+    }
+
+    @Override
+    public String generateTemperatureRanking() throws RemoteException {
+        List<ClimateRecord> data = databaseService.getRecords();
+        return aiService.generateTemperatureRanking(data);
+    }
 }

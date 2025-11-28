@@ -5,4 +5,7 @@ import java.rmi.RemoteException;
 public interface IDataCenterService {
     String getAirQualityReport() throws RemoteException;
     String getHealthAlerts() throws RemoteException;
+    String getNoisePollutionReport() throws RemoteException;
+    String generateThermalComfortReport() throws RemoteException;
+    String generateTemperatureRanking() throws RemoteException;
 }

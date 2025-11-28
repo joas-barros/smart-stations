@@ -81,6 +81,9 @@ public class ClientService {
             System.out.println("========================================");
             System.out.println("1. Consultar Relatório de Qualidade do Ar (AQI)");
             System.out.println("2. Verificar Alertas de Saúde (IA)");
+            System.out.println("3. Consultar Relatório de Poluição Sonora (dB)");
+            System.out.println("4. Gerar Relatório de Conforto Térmico");
+            System.out.println("5. Gerar Ranking de Temperaturas");
             System.out.println("0. Sair");
             System.out.print(">>> Escolha uma opção: ");
 
@@ -98,6 +101,24 @@ public class ClientService {
                         System.out.println("\n--- VERIFICANDO ALERTAS DE RISCO ---");
                         String healthReport = service.getHealthAlerts();
                         System.out.println(healthReport);
+                        break;
+
+                    case "3":
+                        System.out.println("\n--- SOLICITANDO RELATÓRIO DE POLUIÇÃO SONORA ---");
+                        String noiseReport = service.getNoisePollutionReport();
+                        System.out.println(noiseReport);
+                        break;
+
+                    case "4":
+                        System.out.println("\n--- GERANDO RELATÓRIO DE CONFORTO TÉRMICO ---");
+                        String thermalReport = service.generateThermalComfortReport();
+                        System.out.println(thermalReport);
+                        break;
+
+                    case "5":
+                        System.out.println("\n--- GERANDO RANKING DE TEMPERATURAS ---");
+                        String tempRanking = service.generateTemperatureRanking();
+                        System.out.println(tempRanking);
                         break;
 
                     case "0":
