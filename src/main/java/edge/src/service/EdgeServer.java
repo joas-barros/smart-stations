@@ -1,13 +1,13 @@
 package edge.src.service;
 
+import auth.app.AppAuth;
 import device.src.model.ClimateRecord;
 import edge.src.model.LocalDatabase;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
+import java.io.*;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.Socket;
 import java.net.SocketException;
 import java.text.DecimalFormat;
 
@@ -21,6 +21,8 @@ public class EdgeServer {
     private static final double MAX_UV = 10.0;
     private static final double MAX_NOISE = 90.0;
 
+    private static final String AUTH_SERVER_HOST = "localhost";
+
     private static LocalDatabase database;
     private int port;
 
@@ -33,6 +35,8 @@ public class EdgeServer {
         database = new LocalDatabase();
 
         System.out.println("Servidor de Borda rodando na porta UDP: " + port);
+
+        registerWithAuthServer();
 
         try (DatagramSocket socket = new DatagramSocket(port)){
 
@@ -59,6 +63,24 @@ public class EdgeServer {
             System.err.println("[ERRO] Não foi possível abrir a porta UDP " + port);
         } catch (IOException e) {
             System.err.println("Erro de I/O no servidor: " + e.getMessage());
+        }
+    }
+
+    public void registerWithAuthServer() {
+        System.out.println("[INIT] Tentando registrar no Servidor de Autenticação...");
+        try (Socket socket = new Socket(AUTH_SERVER_HOST, AppAuth.PORT);
+             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+
+            // PROTOCOLO: Ajuste conforme o que seu Auth Server espera
+            out.println("REGISTER EDGE " + port);
+
+            String response = in.readLine();
+            System.out.println("[INIT] Resposta da Autenticação: " + response);
+
+        } catch (IOException e) {
+            System.err.println("[AVISO] Não foi possível contatar o Servidor de Autenticação: " + e.getMessage());
+            System.err.println("        Continuando execução, mas o sistema pode estar instável.");
         }
     }
 

@@ -1,7 +1,6 @@
 package auth.src;
 
 import discovery.app.AppDiscovery;
-import discovery.src.DiscoveryService;
 
 import java.io.PrintStream;
 import java.net.ConnectException;
