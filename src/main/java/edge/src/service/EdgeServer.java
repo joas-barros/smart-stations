@@ -13,7 +13,7 @@ import java.text.DecimalFormat;
 
 public class EdgeServer {
 
-    private static final int EDGE_PORT = 9090;
+
     private static final int BUFFER_SIZE = 4096;
 
     private static final double MAX_TEMP = 42.0;
@@ -22,17 +22,19 @@ public class EdgeServer {
     private static final double MAX_NOISE = 90.0;
 
     private static LocalDatabase database;
+    private int port;
 
-    public EdgeServer() {
+    public EdgeServer(int port) {
+        this.port = port;
         this.run();
     }
 
     public void run() {
         database = new LocalDatabase();
 
-        System.out.println("Servidor de Borda rodando na porta UDP: " + EDGE_PORT);
+        System.out.println("Servidor de Borda rodando na porta UDP: " + port);
 
-        try (DatagramSocket socket = new DatagramSocket(EDGE_PORT)){
+        try (DatagramSocket socket = new DatagramSocket(port)){
 
             byte[] buffer = new byte[BUFFER_SIZE];
 
@@ -54,7 +56,7 @@ public class EdgeServer {
             }
 
         }catch (SocketException e) {
-            System.err.println("[ERRO] Não foi possível abrir a porta UDP " + EDGE_PORT);
+            System.err.println("[ERRO] Não foi possível abrir a porta UDP " + port);
         } catch (IOException e) {
             System.err.println("Erro de I/O no servidor: " + e.getMessage());
         }

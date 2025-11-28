@@ -3,8 +3,8 @@ package database.app;
 import database.src.RemoteDatabaseServer;
 
 public class AppRemoteDatabase {
+    private static int PORT = 1099;
     static void main() {
-        int port = 1099; // Porta padrão do RMI
-        new RemoteDatabaseServer(port);
+        new RemoteDatabaseServer(PORT);
     }
 }
