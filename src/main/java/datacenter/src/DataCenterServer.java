@@ -1,5 +1,6 @@
 package datacenter.src;
 
+import datacenter.src.service.IDataCenterService;
 import datacenter.src.service.ImplDataCenterService;
 
 public class DataCenterServer {
@@ -19,7 +20,7 @@ public class DataCenterServer {
         try {
             System.out.println("[DATACENTER] Iniciando servidor...");
 
-            ImplDataCenterService server = new ImplDataCenterService(tcpPort,  rmiPort, myRmiName);
+            IDataCenterService server = new ImplDataCenterService(tcpPort,  rmiPort, myRmiName);
 
             // ---------------------------------------------------------------
             // ETAPA 1: Registro no Servidor de Autenticação

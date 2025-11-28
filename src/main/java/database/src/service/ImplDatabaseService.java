@@ -24,6 +24,7 @@ public class ImplDatabaseService extends UnicastRemoteObject implements IDatabas
 
     @Override
     public List<ClimateRecord> getRecords() throws RemoteException {
+        System.out.println("[DB] Recuperando todos os registros. Total: " + climateRecords.size());
         return  climateRecords.values().stream().toList();
     }
 }

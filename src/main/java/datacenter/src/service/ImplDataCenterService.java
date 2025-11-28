@@ -32,7 +32,8 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
 
     private static final String AUTH_SERVER_HOST = "localhost";
 
-    public void registerWithAuthServer() {
+    @Override
+    public void registerWithAuthServer() throws RemoteException {
         System.out.println("[INIT] Tentando registrar no Servidor de Autenticação...");
         try (Socket socket = new Socket(AUTH_SERVER_HOST, AppAuth.PORT);
              PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
@@ -54,7 +55,8 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
         }
     }
 
-    public void connectToDatabase() {
+    @Override
+    public void connectToDatabase() throws RemoteException {
         System.out.println("[INIT] Buscando Banco de Dados Remoto...");
         while (databaseService == null) {
             try {
@@ -67,13 +69,18 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
         }
     }
 
-    public void startRMIClientService() throws RemoteException, MalformedURLException {
+    public void startRMIClientService() throws RemoteException {
         LocateRegistry.createRegistry(myRmiPort);
-        Naming.rebind("rmi://localhost:" + myRmiPort + "/" + myRmiName, this);
+        try {
+            Naming.rebind("rmi://localhost:" + myRmiPort + "/" + myRmiName, this);
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
         System.out.println("[RMI] Serviço de IA disponível para clientes na porta " + myRmiPort);
     }
 
-    public void startEdgeListener() {
+    @Override
+    public void startEdgeListener() throws RemoteException {
         new Thread(() -> {
             try (ServerSocket serverSocket = new ServerSocket(myTcpPort)) {
                 System.out.println("[TCP] Aguardando dados do Edge Server na porta " + myTcpPort);
@@ -116,30 +123,35 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
     @Override
     public String getAirQualityReport() throws RemoteException {
         List<ClimateRecord> data = databaseService.getRecords();
+        System.out.println("[RMI] Gerando relatório de qualidade do ar...");
         return aiService.generateAirQualityReport(data);
     }
 
     @Override
     public String getHealthAlerts() throws RemoteException {
         List<ClimateRecord> data = databaseService.getRecords();
+        System.out.println("[RMI] Gerando alertas de saúde...");
         return aiService.generateHealthAlerts(data);
     }
 
     @Override
     public String getNoisePollutionReport() throws RemoteException {
         List<ClimateRecord> data = databaseService.getRecords();
+        System.out.println("[RMI] Gerando relatório de poluição sonora...");
         return aiService.generateNoisePollutionReport(data);
     }
 
     @Override
     public String generateThermalComfortReport() throws RemoteException {
         List<ClimateRecord> data = databaseService.getRecords();
+        System.out.println("[RMI] Gerando relatório de conforto térmico...");
         return aiService.generateThermalComfortReport(data);
     }
 
     @Override
     public String generateTemperatureRanking() throws RemoteException {
         List<ClimateRecord> data = databaseService.getRecords();
+        System.out.println("[RMI] Gerando ranking de temperaturas...");
         return aiService.generateTemperatureRanking(data);
     }
 }
