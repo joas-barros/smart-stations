@@ -1,5 +1,6 @@
 package auth.src;
 
+import discovery.app.AppDiscovery;
 import discovery.src.DiscoveryService;
 
 import java.io.PrintStream;
@@ -30,7 +31,7 @@ public class AuthService {
             System.out.println("Servidor de calculo rodando na porta: " + port);
 
             // Conecta ao servidor diretorio para solicitar o registro da porta
-            Socket discoverySocket = new Socket("localhost", DiscoveryService.BASE_PORT);
+            Socket discoverySocket = new Socket("localhost", AppDiscovery.BASE_PORT);
             System.out.println("Conectado ao servidor de descoberta para registro de porta.");
 
             // Envia a mensagem de registro

@@ -1,6 +1,7 @@
 package device.src.model;
 
 import device.src.service.DeviceService;
+import discovery.app.AppDiscovery;
 
 import java.io.*;
 import java.net.*;
@@ -12,7 +13,6 @@ public class Device implements Runnable{
     private String location;
 
     private static final String SERVER_HOST = "localhost";
-    private static final int DISCOVERY_PORT = 8080;
 
     private final Random random = new Random();
 
@@ -31,7 +31,7 @@ public class Device implements Runnable{
             System.out.println("[" + id + "] Conectando ao Servidor de Descoberta...");
 
             // ETAPA 1: Descoberta (TCP)
-            try (Socket discoverySocket = new Socket(SERVER_HOST, DISCOVERY_PORT);
+            try (Socket discoverySocket = new Socket(SERVER_HOST, AppDiscovery.BASE_PORT);
                  PrintWriter out = new PrintWriter(discoverySocket.getOutputStream(), true);
                  BufferedReader in = new BufferedReader(new InputStreamReader(discoverySocket.getInputStream()))) {
 

@@ -14,18 +14,19 @@ public class DiscoveryService {
 
     private AtomicInteger clientCounter = new AtomicInteger(0);
 
-    public static final int BASE_PORT = 5000;
+    private int port;
 
-    public DiscoveryService() {
+    public DiscoveryService(int port) {
+        this.port = port;
         run();
     }
 
     private void run() {
         try {
             // Cria o socket do servidor na porta BASE_PORT
-            ServerSocket serverSocket = new ServerSocket(BASE_PORT);
+            ServerSocket serverSocket = new ServerSocket(port);
 
-            System.out.println("Servidor de diretório rodando na porta: " + BASE_PORT);
+            System.out.println("Servidor de diretório rodando na porta: " + port);
             while (true) {
                 // Aguarda por conexões de clientes
                 Socket clientSocket = serverSocket.accept();
