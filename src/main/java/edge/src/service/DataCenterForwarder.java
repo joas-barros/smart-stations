@@ -1,5 +1,6 @@
 package edge.src.service;
 
+import datacenter.app.AppDataCenter;
 import datacenter.src.DataCenterServer;
 import device.src.model.ClimateRecord;
 
@@ -21,7 +22,7 @@ public class DataCenterForwarder implements Runnable {
 
     @Override
     public void run() {
-        try (Socket socket = new Socket(DATACENTER_HOST, DataCenterServer.BASE_PORT);
+        try (Socket socket = new Socket(DATACENTER_HOST, AppDataCenter.BASE_TCP_PORT);
              ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
              ObjectInputStream in = new ObjectInputStream(socket.getInputStream())){
 

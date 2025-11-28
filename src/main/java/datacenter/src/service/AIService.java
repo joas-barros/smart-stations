@@ -1,4 +1,4 @@
-package datacenter.src;
+package datacenter.src.service;
 
 import device.src.model.ClimateRecord;
 

@@ -1,8 +1,7 @@
-package datacenter.src;
+package datacenter.src.service;
 
 import auth.app.AppAuth;
 import database.src.service.IDatabaseService;
-import database.src.service.ImplDatabaseService;
 import device.src.model.ClimateRecord;
 
 import java.io.*;
@@ -24,7 +23,6 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
 
     public ImplDataCenterService(int myTcpPort, int myRmiPort) throws RemoteException {
         this.aiService = new AIService();
-        this.databaseService = new ImplDatabaseService();
         this.myTcpPort = myTcpPort;
         this.myRmiPort = myRmiPort;
     }
@@ -49,7 +47,7 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
         }
     }
 
-    private void connectToDatabase() {
+    public void connectToDatabase() {
         System.out.println("[INIT] Buscando Banco de Dados Remoto...");
         while (databaseService == null) {
             try {
@@ -62,13 +60,13 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
         }
     }
 
-    private void startRMIClientService() throws RemoteException, MalformedURLException {
-        LocateRegistry.createRegistry(myTcpPort);
-        Naming.rebind("rmi://localhost:" + myTcpPort + "/DataCenterService", this);
-        System.out.println("[RMI] Serviço de IA disponível para clientes na porta " + myTcpPort);
+    public void startRMIClientService() throws RemoteException, MalformedURLException {
+        LocateRegistry.createRegistry(myRmiPort);
+        Naming.rebind("rmi://localhost:" + myRmiPort + "/DataCenterService", this);
+        System.out.println("[RMI] Serviço de IA disponível para clientes na porta " + myRmiPort);
     }
 
-    private void startEdgeListener() {
+    public void startEdgeListener() {
         new Thread(() -> {
             try (ServerSocket serverSocket = new ServerSocket(myTcpPort)) {
                 System.out.println("[TCP] Aguardando dados do Edge Server na porta " + myTcpPort);
