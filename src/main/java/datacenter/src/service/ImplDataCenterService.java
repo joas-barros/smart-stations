@@ -38,8 +38,12 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
              PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
              BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
 
+            String requisicao = "REGISTER DATACENTER " + myRmiPort;
+
+            System.out.println("[INIT] Mandando requisição ao Auth Server: " + requisicao);
+
             // PROTOCOLO: Ajuste conforme o que seu Auth Server espera
-            out.println("REGISTER DATACENTER " + myRmiPort);
+            out.println(requisicao);
 
             String response = in.readLine();
             System.out.println("[INIT] Resposta da Autenticação: " + response);

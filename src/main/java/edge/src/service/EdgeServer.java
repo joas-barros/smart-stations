@@ -73,7 +73,10 @@ public class EdgeServer {
              BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
 
             // PROTOCOLO: Ajuste conforme o que seu Auth Server espera
-            out.println("REGISTER EDGE " + port);
+
+            String registerMessage = "REGISTER EDGE " + port;
+            System.out.println("[INIT] Mandando requisição ao Auth Server: " + registerMessage);
+            out.println(registerMessage);
 
             String response = in.readLine();
             System.out.println("[INIT] Resposta da Autenticação: " + response);
@@ -89,19 +92,19 @@ public class EdgeServer {
         System.out.println("[REGISTRO RECEBIDO], Dispositivo:" + record.getDeviceId() + ". Localização: " + record.getLocation() + ". Hora da coleta: " + record.getTimeStamp());
 
         if (record.getTemperature() > MAX_TEMP) {
-            System.out.println("  [ALERTA] (Calor intenso) Temperatura extrema detectada em " + record.getLocation() + ": " + df.format(record.getTemperature()) + "°C");
+            System.err.println("  [ALERTA] (Calor intenso) Temperatura extrema detectada em " + record.getLocation() + ": " + df.format(record.getTemperature()) + "°C");
         }
 
         if (record.getCarbonDioxide() > MAX_CO2) {
-            System.out.println("  [ALERTA] (Má qualidade do ar) Nível de CO2 elevado detectado em " + record.getLocation() + ": " + df.format(record.getCarbonDioxide()) + " ppm");
+            System.err.println("  [ALERTA] (Má qualidade do ar) Nível de CO2 elevado detectado em " + record.getLocation() + ": " + df.format(record.getCarbonDioxide()) + " ppm");
         }
 
         if (record.getUvRadiation() > MAX_UV) {
-            System.out.println("  [ALERTA] (Radiação muito alto) Índice UV extremo detectado em " + record.getLocation() + ": " + df.format(record.getUvRadiation()));
+            System.err.println("  [ALERTA] (Radiação muito alto) Índice UV extremo detectado em " + record.getLocation() + ": " + df.format(record.getUvRadiation()));
         }
 
         if (record.getUrbanNoise() > MAX_NOISE) {
-            System.out.println("  [ALERTA] (Poluição sonora grave) Nível de ruído alto detectado em " + record.getLocation() + ": " + df.format(record.getUrbanNoise()) + " dB");
+            System.err.println("  [ALERTA] (Poluição sonora grave) Nível de ruído alto detectado em " + record.getLocation() + ": " + df.format(record.getUrbanNoise()) + " dB");
         }
 
         database.insert(record);

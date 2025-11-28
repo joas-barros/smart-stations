@@ -17,5 +17,9 @@ public class DeviceService {
         new Thread(new Device("02", "Raspberry Pi Pico W", "Nova Betania")).start();
         new Thread(new Device("03", "SSTM32 Blue Pill", "Macarrão")).start();
         new Thread(new Device("04", "NodeMCU-ESP32", "Maisa")).start();
+
+        System.out.println("===========================================================");
+        System.out.println("Registros climaticos gerados com sucesso pelos dispositivos.");
+        System.out.println("===========================================================");
     }
 }

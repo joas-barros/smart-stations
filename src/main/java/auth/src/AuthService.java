@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class AuthService {
     // map thread-safe para armazenar as portas de cada serviço
-    static Map<String, Integer> storagePorts = new ConcurrentHashMap<>();
+    public Map<String, Integer> storagePorts = new ConcurrentHashMap<>();
 
     ServerSocket serverSocket;
     Socket client;
@@ -27,7 +27,7 @@ public class AuthService {
         try {
             // Cria o socket do servidor na porta especificada
             serverSocket = new ServerSocket(port);
-            System.out.println("Servidor de calculo rodando na porta: " + port);
+            System.out.println("Servidor de autenticacao rodando na porta: " + port);
 
             // Conecta ao servidor diretorio para solicitar o registro da porta
             Socket discoverySocket = new Socket("localhost", AppDiscovery.BASE_PORT);

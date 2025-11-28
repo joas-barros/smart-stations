@@ -36,6 +36,9 @@ public class AuthThread implements Runnable {
                 // Adiciona a porta do servidor de armazenamento ao mapa
                 storagePorts.put(storageId, port);
                 System.out.println("Servidor de armazenamento " + storageId + " registrado na porta: " + port);
+
+                // Envia confirmação ao cliente
+                out.println("REGISTERED");
             } else if (request.startsWith("GET")) {
                 String[] parts = request.split(" ");
                 String storageId = parts[1];

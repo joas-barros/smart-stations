@@ -1,5 +1,6 @@
 package client.src;
 
+import datacenter.app.AppDataCenter;
 import datacenter.src.service.IDataCenterService;
 import discovery.app.AppDiscovery;
 
@@ -42,7 +43,7 @@ public class ClientService {
 
             System.out.println("[CLIENTE] Conectando ao serviço de IA via RMI...");
 
-            String rmiUrl = "rmi://" + HOST + ":" + dataCenterRmiPort + "/DataCenterService";
+            String rmiUrl = "rmi://" + HOST + ":" + dataCenterRmiPort + "/" + AppDataCenter.BASE_RMI_NAME;
             IDataCenterService service = (IDataCenterService) Naming.lookup(rmiUrl);
 
             System.out.println("[CLIENTE] Conexão estabelecida! Iniciando interface...");
