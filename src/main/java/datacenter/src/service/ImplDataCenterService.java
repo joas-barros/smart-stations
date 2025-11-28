@@ -1,6 +1,7 @@
 package datacenter.src.service;
 
 import auth.app.AppAuth;
+import database.app.AppRemoteDatabase;
 import database.src.service.IDatabaseService;
 import device.src.model.ClimateRecord;
 
@@ -20,11 +21,13 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
     private AIService aiService;
     private int myTcpPort;
     private int myRmiPort;
+    private String myRmiName;
 
-    public ImplDataCenterService(int myTcpPort, int myRmiPort) throws RemoteException {
+    public ImplDataCenterService(int myTcpPort, int myRmiPort, String myRmiName) throws RemoteException {
         this.aiService = new AIService();
         this.myTcpPort = myTcpPort;
         this.myRmiPort = myRmiPort;
+        this.myRmiName = myRmiName;
     }
 
     private static final String AUTH_SERVER_HOST = "localhost";
@@ -52,7 +55,7 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
         while (databaseService == null) {
             try {
                 // Tenta buscar o serviço na porta 1099
-                databaseService = (IDatabaseService) Naming.lookup("rmi://localhost:1099/ClimateDB");
+                databaseService = (IDatabaseService) Naming.lookup("rmi://localhost:" + AppRemoteDatabase.PORT + "/" + AppRemoteDatabase.SERVICE_NAME);
                 System.out.println("[INIT] Conexão estabelecida com o Banco de Dados.");
             } catch (Exception e) {
                 System.out.println("[INIT] Banco de Dados indisponível.");
@@ -62,7 +65,7 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
 
     public void startRMIClientService() throws RemoteException, MalformedURLException {
         LocateRegistry.createRegistry(myRmiPort);
-        Naming.rebind("rmi://localhost:" + myRmiPort + "/DataCenterService", this);
+        Naming.rebind("rmi://localhost:" + myRmiPort + "/" + myRmiName, this);
         System.out.println("[RMI] Serviço de IA disponível para clientes na porta " + myRmiPort);
     }
 

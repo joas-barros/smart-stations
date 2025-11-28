@@ -6,10 +6,12 @@ public class DataCenterServer {
 
     private int tcpPort;
     private int rmiPort;
+    private String myRmiName;
 
-    public DataCenterServer(int tcpPort, int rmiPort) {
+    public DataCenterServer(int tcpPort, int rmiPort, String myRmiName) {
         this.tcpPort = tcpPort;
         this.rmiPort = rmiPort;
+        this.myRmiName = myRmiName;
         this.run();
     }
 
@@ -17,7 +19,7 @@ public class DataCenterServer {
         try {
             System.out.println("[DATACENTER] Iniciando servidor...");
 
-            ImplDataCenterService server = new ImplDataCenterService(tcpPort,  rmiPort);
+            ImplDataCenterService server = new ImplDataCenterService(tcpPort,  rmiPort, myRmiName);
 
             // ---------------------------------------------------------------
             // ETAPA 1: Registro no Servidor de Autenticação

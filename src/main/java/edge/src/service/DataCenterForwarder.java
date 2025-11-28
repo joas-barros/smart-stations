@@ -1,7 +1,6 @@
 package edge.src.service;
 
 import datacenter.app.AppDataCenter;
-import datacenter.src.DataCenterServer;
 import device.src.model.ClimateRecord;
 
 import java.io.IOException;
