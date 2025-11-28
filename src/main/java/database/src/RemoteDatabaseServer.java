@@ -23,7 +23,7 @@ public class RemoteDatabaseServer {
             IDatabaseService databaseService = new ImplDatabaseService();
 
             LocateRegistry.createRegistry(port);
-            Naming.rebind("rmi://0.0.0.0/RemoteDatabaseServer", databaseService);
+            Naming.rebind("rmi://localhost:" + port + "/ClimateDB", databaseService);
             System.out.println("[DB] Servidor RMI iniciado na porta " + port);
         } catch (RemoteException e) {
             System.err.println("[DB] Erro ao iniciar o servidor RMI: " + e.getMessage());
