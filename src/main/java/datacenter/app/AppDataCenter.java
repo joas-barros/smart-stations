@@ -8,7 +8,7 @@ public class AppDataCenter {
     public static final int BASE_RMI_PORT = 9001;
     public static final String BASE_RMI_NAME = "DataCenterService";
 
-    static void main() {
+    public static void main(String[] args) {
         new DataCenterServer(BASE_TCP_PORT, BASE_RMI_PORT, BASE_RMI_NAME);
     }
 }

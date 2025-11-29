@@ -3,7 +3,8 @@ package device.app;
 import device.src.service.DeviceService;
 
 public class AppDevice {
-    static void main() {
+
+    public static void main(String[] args) {
         new DeviceService();
     }
 }
