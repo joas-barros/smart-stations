@@ -4,6 +4,8 @@ import auth.app.AppAuth;
 import database.app.AppRemoteDatabase;
 import database.src.service.IDatabaseService;
 import device.src.model.ClimateRecord;
+import device.src.model.IntegrityPacket;
+import device.src.util.SerializationUtils;
 
 import java.io.*;
 import java.net.MalformedURLException;
@@ -100,19 +102,27 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
         try (ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
              ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream())) {
 
-            // Recebe
-            ClimateRecord record = (ClimateRecord) in.readObject();
 
-            // Persiste
-            if (databaseService != null) {
-                databaseService.saveRecord(record);
-                System.out.println("[DATA] Registro " + record.getId() + " salvo no DB.");
-            } else {
-                System.err.println("[ERRO] DB desconectado. Dados perdidos.");
+            // 1. Recebe o objeto
+            Object receivedObj = in.readObject();
+            if (receivedObj instanceof IntegrityPacket) {
+                IntegrityPacket packet = (IntegrityPacket) receivedObj;
+
+                // 2. Valida
+                if (packet.isValid()) {
+                    ClimateRecord record = (ClimateRecord) SerializationUtils.deserialize(packet.getData());
+
+                    // Salva no DB...
+                    if (databaseService != null) {
+                        databaseService.saveRecord(record);
+                        System.out.println("[DATA] Registro salvo e verificado (CRC OK).");
+                    }
+                    out.writeObject("ACK");
+                } else {
+                    System.err.println("[ERRO] Checksum inválido no Datacenter.");
+                    out.writeObject("NACK_CHECKSUM_ERROR");
+                }
             }
-
-            // 3. Confirma
-            out.writeObject("ACK");
 
         } catch (Exception e) {
             System.err.println("[TCP] Erro na transmissão com Edge: " + e.getMessage());

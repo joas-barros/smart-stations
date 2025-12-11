@@ -9,6 +9,7 @@ public interface IDataCenterService extends Remote {
     String getNoisePollutionReport() throws RemoteException;
     String generateThermalComfortReport() throws RemoteException;
     String generateTemperatureRanking() throws RemoteException;
+
     void registerWithAuthServer() throws  RemoteException;
     void connectToDatabase() throws RemoteException;
     void startRMIClientService() throws RemoteException;

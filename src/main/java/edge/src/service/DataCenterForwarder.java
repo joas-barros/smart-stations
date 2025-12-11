@@ -2,6 +2,8 @@ package edge.src.service;
 
 import datacenter.app.AppDataCenter;
 import device.src.model.ClimateRecord;
+import device.src.model.IntegrityPacket;
+import device.src.util.SerializationUtils;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -25,13 +27,18 @@ public class DataCenterForwarder implements Runnable {
              ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
              ObjectInputStream in = new ObjectInputStream(socket.getInputStream())){
 
-            out.writeObject(record);
+            byte[] recordBytes = SerializationUtils.serialize(record);
+            IntegrityPacket integrityPacket = new IntegrityPacket(recordBytes);
+
+            out.writeObject(integrityPacket);
             out.flush();
 
             String response = (String) in.readObject();
 
             if ("ACK".equals(response)) {
                 System.out.println("  [CLOUD] Registro " + record.getId() + " sincronizado com sucesso.");
+            } else if ("NACK_CHECKSUM_ERROR".equals(response)) {
+                System.err.println("[CLOUD] Erro de integridade ao enviar registro " + record.getId() + " para o Data Center.");
             } else {
                 System.err.println("[CLOUD] Resposta estranha do Data Center: " + response);
             }

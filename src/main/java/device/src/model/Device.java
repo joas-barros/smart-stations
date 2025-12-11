@@ -1,6 +1,7 @@
 package device.src.model;
 
 import device.src.service.DeviceService;
+import device.src.util.SerializationUtils;
 import discovery.app.AppDiscovery;
 
 import java.io.*;
@@ -75,17 +76,20 @@ public class Device implements Runnable{
                 // 1. Coletar dados (Gera o objeto ClimateRecord)
                 ClimateRecord record = collectData();
 
-                // 2. Serializar o objeto para byte array
-                ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-                ObjectOutputStream objectOutput = new ObjectOutputStream(byteStream);
-                objectOutput.writeObject(record);
-                objectOutput.flush();
-                byte[] dataBytes = byteStream.toByteArray();
+                // 2. Serializa o ClimateRecord para bytes
+                byte[] recordBytes = SerializationUtils.serialize(record);
 
-                // 3. Criar e enviar o pacote UDP
+                // 3. Cria o pacote de integridade (calcula CRC automaticamente)
+                IntegrityPacket integrityPacket = new IntegrityPacket(recordBytes);
+
+
+                // 4. Serializa o IntegrityPacket para enviar via UDP
+                byte[] packetBytes = SerializationUtils.serialize(integrityPacket);
+
+                // 5. Criar e enviar o pacote UDP
                 DatagramPacket packet = new DatagramPacket(
-                        dataBytes,
-                        dataBytes.length,
+                        packetBytes,
+                        packetBytes.length,
                         serverAddress,
                         edgePort
                 );
