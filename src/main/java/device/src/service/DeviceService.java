@@ -19,7 +19,7 @@ public class DeviceService {
         new Thread(new Device("04", "NodeMCU-ESP32", "Maisa")).start();
 
         System.out.println("===========================================================");
-        System.out.println("Registros climaticos gerados com sucesso pelos dispositivos.");
+        System.out.println("Registros climaticos sendo coletados pelos dispositivos.");
         System.out.println("===========================================================");
     }
 }
