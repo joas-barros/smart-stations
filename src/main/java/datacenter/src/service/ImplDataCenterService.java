@@ -1,7 +1,9 @@
 package datacenter.src.service;
 
 import auth.app.AppAuth;
-import database.app.AppRemoteDatabase;
+import database.app.AppRemoteDatabaseFollower1;
+import database.app.AppRemoteDatabaseFollower2;
+import database.app.AppRemoteDatabaseLeader;
 import database.src.service.IDatabaseService;
 import device.src.model.ClimateRecord;
 import device.src.model.IntegrityPacket;
@@ -15,6 +17,7 @@ import java.rmi.Naming;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
 import java.util.List;
 
 public class ImplDataCenterService extends UnicastRemoteObject implements IDataCenterService{
@@ -71,13 +74,34 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
     @Override
     public void connectToDatabase() throws RemoteException {
         System.out.println("[INIT] Buscando Banco de Dados Remoto...");
+
+        List<Integer> dbPorts = new ArrayList<>();
+        dbPorts.add(AppRemoteDatabaseLeader.PORT);
+        dbPorts.add(AppRemoteDatabaseFollower1.PORT);
+        dbPorts.add(AppRemoteDatabaseFollower2.PORT);
         while (databaseService == null) {
-            try {
-                // Tenta buscar o serviço na porta 1099
-                databaseService = (IDatabaseService) Naming.lookup("rmi://localhost:" + AppRemoteDatabase.PORT + "/" + AppRemoteDatabase.SERVICE_NAME);
-                System.out.println("[INIT] Conexão estabelecida com o Banco de Dados.");
-            } catch (Exception e) {
-                System.out.println("[INIT] Banco de Dados indisponível.");
+            for (Integer port : dbPorts) {
+                try {
+                    databaseService = (IDatabaseService)
+                            Naming.lookup("rmi://localhost:" + port + "/" + AppRemoteDatabaseLeader.SERVICE_NAME);
+
+                    if (port != AppRemoteDatabaseLeader.PORT) {
+                        // Avisa a réplica: "Agora você manda aqui!"
+                        databaseService.setAsLeader();
+                    }
+                    System.out.println("[INIT] Conectado ao Banco de Dados na porta " + port);
+                    break;
+                } catch (Exception e) {
+                    System.err.println("[INIT] Falha ao conectar ao Banco de Dados na porta " + port + ": " + e.getMessage());
+                }
+            }
+            if (databaseService == null) {
+                System.out.println("[AVISO] Nenhum DB encontrado. Tentando novamente em 2s...");
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
             }
         }
     }
@@ -125,7 +149,16 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
 
                     // Salva no DB...
                     if (databaseService != null) {
-                        databaseService.saveRecord(record);
+                        try {
+                            databaseService.saveRecord(record);
+                        } catch (RemoteException e) {
+                            System.err.println("[DATACENTER] Conexão com DB perdida! Tentando reconectar...");
+                            this.databaseService = null;
+                            connectToDatabase(); // Tenta achar um novo líder (um dos backups)
+                            if (databaseService != null) {
+                                databaseService.saveRecord(record); // Tenta salvar de novo
+                            }
+                        }
                         System.out.println("[DATA] Registro salvo e verificado (CRC OK).");
                     }
                     out.writeObject("ACK");

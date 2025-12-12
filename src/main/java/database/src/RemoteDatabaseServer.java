@@ -7,22 +7,23 @@ import java.net.MalformedURLException;
 import java.rmi.Naming;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
+import java.util.List;
 
 public class RemoteDatabaseServer {
     private int port;
     private String serviceName;
 
-    public RemoteDatabaseServer(int port, String serviceName) {
+    public RemoteDatabaseServer(int port, String serviceName, boolean isLeader, List<Integer> backupPorts) {
         this.port = port;
         this.serviceName = serviceName;
-        this.run();
+        this.run(isLeader, backupPorts);
     }
 
 
-    public void run(){
+    public void run(boolean isLeader, List<Integer> backupPorts) {
 
         try {
-            IDatabaseService databaseService = new ImplDatabaseService();
+            IDatabaseService databaseService = new ImplDatabaseService(isLeader, backupPorts);
 
             LocateRegistry.createRegistry(port);
             Naming.rebind("rmi://localhost:" + port + "/" + serviceName, databaseService);
