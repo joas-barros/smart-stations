@@ -34,6 +34,17 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
 
     private static final String AUTH_SERVER_HOST = "localhost";
 
+    private IntegrityPacket createPacket(String reportData) throws RemoteException {
+        try {
+            // 1. Serializa a String do relatório para bytes
+            byte[] dataBytes = SerializationUtils.serialize(reportData);
+            // 2. Cria o pacote
+            return new IntegrityPacket(dataBytes);
+        } catch (IOException e) {
+            throw new RemoteException("Erro ao serializar resposta no servidor", e);
+        }
+    }
+
     @Override
     public void registerWithAuthServer() throws RemoteException {
         System.out.println("[INIT] Tentando registrar no Servidor de Autenticação...");
@@ -131,37 +142,47 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
 
 
     @Override
-    public String getAirQualityReport() throws RemoteException {
+    public IntegrityPacket getAirQualityReport() throws RemoteException {
         List<ClimateRecord> data = databaseService.getRecords();
         System.out.println("[RMI] Gerando relatório de qualidade do ar...");
-        return aiService.generateAirQualityReport(data);
+        String report = aiService.generateAirQualityReport(data);
+
+        return createPacket(report);
     }
 
     @Override
-    public String getHealthAlerts() throws RemoteException {
+    public IntegrityPacket getHealthAlerts() throws RemoteException {
         List<ClimateRecord> data = databaseService.getRecords();
         System.out.println("[RMI] Gerando alertas de saúde...");
-        return aiService.generateHealthAlerts(data);
+        String report = aiService.generateHealthAlerts(data);
+
+        return createPacket(report);
     }
 
     @Override
-    public String getNoisePollutionReport() throws RemoteException {
+    public IntegrityPacket getNoisePollutionReport() throws RemoteException {
         List<ClimateRecord> data = databaseService.getRecords();
         System.out.println("[RMI] Gerando relatório de poluição sonora...");
-        return aiService.generateNoisePollutionReport(data);
+        String report = aiService.generateNoisePollutionReport(data);
+
+        return createPacket(report);
     }
 
     @Override
-    public String generateThermalComfortReport() throws RemoteException {
+    public IntegrityPacket generateThermalComfortReport() throws RemoteException {
         List<ClimateRecord> data = databaseService.getRecords();
         System.out.println("[RMI] Gerando relatório de conforto térmico...");
-        return aiService.generateThermalComfortReport(data);
+        String report = aiService.generateThermalComfortReport(data);
+
+        return createPacket(report);
     }
 
     @Override
-    public String generateTemperatureRanking() throws RemoteException {
+    public IntegrityPacket generateTemperatureRanking() throws RemoteException {
         List<ClimateRecord> data = databaseService.getRecords();
         System.out.println("[RMI] Gerando ranking de temperaturas...");
-        return aiService.generateTemperatureRanking(data);
+        String report = aiService.generateTemperatureRanking(data);
+
+        return createPacket(report);
     }
 }
