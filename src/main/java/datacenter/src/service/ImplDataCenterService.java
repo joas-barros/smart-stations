@@ -164,10 +164,30 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
         }
     }
 
+    // Método auxiliar para garantir leitura segura (Failover)
+    private List<ClimateRecord> getRecordsSafe() throws RemoteException {
+        if (databaseService == null) {
+            connectToDatabase();
+        }
+
+        try {
+            return databaseService.getRecords();
+        }  catch (RemoteException e) {
+            System.err.println("[DATACENTER] Falha ao ler do Banco de Dados. Tentando reconectar...");
+            this.databaseService = null;
+            connectToDatabase(); // Tenta achar um novo líder (um dos backups)
+            if (databaseService != null) {
+                return databaseService.getRecords(); // Tenta buscar de novo
+            } else {
+                throw new RemoteException("Banco de dados indisponível. Não foi possível gerar o relatório.");
+            }
+        }
+    }
+
 
     @Override
     public IntegrityPacket getAirQualityReport() throws RemoteException {
-        List<ClimateRecord> data = databaseService.getRecords();
+        List<ClimateRecord> data = getRecordsSafe();
         System.out.println("[RMI] Gerando relatório de qualidade do ar...");
         String report = aiService.generateAirQualityReport(data);
 
@@ -176,7 +196,7 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
 
     @Override
     public IntegrityPacket getHealthAlerts() throws RemoteException {
-        List<ClimateRecord> data = databaseService.getRecords();
+        List<ClimateRecord> data = getRecordsSafe();
         System.out.println("[RMI] Gerando alertas de saúde...");
         String report = aiService.generateHealthAlerts(data);
 
@@ -185,7 +205,7 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
 
     @Override
     public IntegrityPacket getNoisePollutionReport() throws RemoteException {
-        List<ClimateRecord> data = databaseService.getRecords();
+        List<ClimateRecord> data = getRecordsSafe();
         System.out.println("[RMI] Gerando relatório de poluição sonora...");
         String report = aiService.generateNoisePollutionReport(data);
 
@@ -194,7 +214,7 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
 
     @Override
     public IntegrityPacket generateThermalComfortReport() throws RemoteException {
-        List<ClimateRecord> data = databaseService.getRecords();
+        List<ClimateRecord> data = getRecordsSafe();
         System.out.println("[RMI] Gerando relatório de conforto térmico...");
         String report = aiService.generateThermalComfortReport(data);
 
@@ -203,7 +223,7 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
 
     @Override
     public IntegrityPacket generateTemperatureRanking() throws RemoteException {
-        List<ClimateRecord> data = databaseService.getRecords();
+        List<ClimateRecord> data = getRecordsSafe();
         System.out.println("[RMI] Gerando ranking de temperaturas...");
         String report = aiService.generateTemperatureRanking(data);
 
