@@ -16,11 +16,14 @@ public class ImplDatabaseService extends UnicastRemoteObject implements IDatabas
     private List<Integer> backupPorts;
     private boolean isLeader;
 
-    public ImplDatabaseService(boolean isLeader, List<Integer> backupPorts) throws RemoteException {
+    private int currentPort;
+
+    public ImplDatabaseService(boolean isLeader, List<Integer> backupPorts, int currentPort) throws RemoteException {
         super();
         climateRecords = new ConcurrentHashMap<>();
         this.isLeader = isLeader;
         this.backupPorts = backupPorts;
+        this.currentPort = currentPort;
     }
 
     @Override
@@ -41,12 +44,13 @@ public class ImplDatabaseService extends UnicastRemoteObject implements IDatabas
     private void propagateToBackups(ClimateRecord record) {
         for (Integer port : backupPorts) {
             try {
+                if (port == currentPort) continue; // Pula a porta do próprio líder
                 IDatabaseService backupService = (IDatabaseService)
                         Naming.lookup("rmi://localhost:" + port + "/ClimateDB");
                 backupService.syncRecord(record);
                 System.out.println("[DB] Registro " + record.getId() + " sincronizado com backup na porta " + port);
-            } catch (Exception e) {
-                System.err.println("[DB] Falha ao sincronizar com backup na porta " + port + ": " + e.getMessage());
+            }  catch (Exception e) {
+                System.err.println("[DB] [AVISO] Backup na porta " + port + " indisponível (offline).");
             }
         }
     }

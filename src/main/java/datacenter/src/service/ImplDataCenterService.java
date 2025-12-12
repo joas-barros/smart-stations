@@ -1,9 +1,7 @@
 package datacenter.src.service;
 
 import auth.app.AppAuth;
-import database.app.AppRemoteDatabaseFollower1;
-import database.app.AppRemoteDatabaseFollower2;
-import database.app.AppRemoteDatabaseLeader;
+import database.app.common.CommomDatabase;
 import database.src.service.IDatabaseService;
 import device.src.model.ClimateRecord;
 import device.src.model.IntegrityPacket;
@@ -17,7 +15,6 @@ import java.rmi.Naming;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.ArrayList;
 import java.util.List;
 
 public class ImplDataCenterService extends UnicastRemoteObject implements IDataCenterService{
@@ -75,24 +72,18 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
     public void connectToDatabase() throws RemoteException {
         System.out.println("[INIT] Buscando Banco de Dados Remoto...");
 
-        List<Integer> dbPorts = new ArrayList<>();
-        dbPorts.add(AppRemoteDatabaseLeader.PORT);
-        dbPorts.add(AppRemoteDatabaseFollower1.PORT);
-        dbPorts.add(AppRemoteDatabaseFollower2.PORT);
+        List<Integer> dbPorts = CommomDatabase.AVAILABLE_PORTS;
         while (databaseService == null) {
             for (Integer port : dbPorts) {
                 try {
                     databaseService = (IDatabaseService)
-                            Naming.lookup("rmi://localhost:" + port + "/" + AppRemoteDatabaseLeader.SERVICE_NAME);
+                            Naming.lookup("rmi://localhost:" + port + "/" + CommomDatabase.SERVICE_NAME);
 
-                    if (port != AppRemoteDatabaseLeader.PORT) {
-                        // Avisa a réplica: "Agora você manda aqui!"
-                        databaseService.setAsLeader();
-                    }
+                    databaseService.setAsLeader(); // Avisa a réplica: "Agora você manda aqui!"
                     System.out.println("[INIT] Conectado ao Banco de Dados na porta " + port);
                     break;
                 } catch (Exception e) {
-                    System.err.println("[INIT] Falha ao conectar ao Banco de Dados na porta " + port + ": " + e.getMessage());
+                    System.err.println("[INIT] [AVISO] Banco de Dados na porta " + port + " indisponível.");
                 }
             }
             if (databaseService == null) {

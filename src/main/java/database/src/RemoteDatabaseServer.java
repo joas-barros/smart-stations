@@ -23,7 +23,7 @@ public class RemoteDatabaseServer {
     public void run(boolean isLeader, List<Integer> backupPorts) {
 
         try {
-            IDatabaseService databaseService = new ImplDatabaseService(isLeader, backupPorts);
+            IDatabaseService databaseService = new ImplDatabaseService(isLeader, backupPorts, port);
 
             LocateRegistry.createRegistry(port);
             Naming.rebind("rmi://localhost:" + port + "/" + serviceName, databaseService);
