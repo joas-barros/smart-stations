@@ -6,6 +6,8 @@ import discovery.app.AppDiscovery;
 
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 public class Device implements Runnable{
@@ -48,18 +50,22 @@ public class Device implements Runnable{
             int edgePort = -1;
             System.out.println("[" + id + "] Conectando ao Servidor de Autenticação...");
 
-            // ETAPA 2: Autenticação (TCP)
+            // ETAPA 2: Autenticação (TCP) -> Obter lista de portas do Servidor de Borda
+            List<Integer> edgePorts = new ArrayList<>();
             try (Socket authSocket = new Socket(SERVER_HOST, authPort);
                  PrintWriter out = new PrintWriter(authSocket.getOutputStream(), true);
                  BufferedReader in = new BufferedReader(new InputStreamReader(authSocket.getInputStream()))) {
 
                 // Envia ID do dispositivo para autenticar
                 out.println("GET EDGE");
+                String response = in.readLine(); // Recebe "9090,9091,9092"
 
-                // Recebe a porta do Servidor de Borda (UDP)
-                String response = in.readLine();
-                edgePort = Integer.parseInt(response);
-                System.out.println("[" + id + "] Autenticado. Porta de Borda recebida: " + edgePort);
+                if (response != null && !response.equals("STORAGE_NOT_FOUND")) {
+                    for (String p : response.split(",")) {
+                        edgePorts.add(Integer.parseInt(p));
+                    }
+                    System.out.println("[" + id + "] Grupo de Réplicas SMR recebido: " + edgePorts);
+                }
             }
 
             // ETAPA 3: Envio de Dados (UDP)
@@ -86,18 +92,23 @@ public class Device implements Runnable{
                 // 4. Serializa o IntegrityPacket para enviar via UDP
                 byte[] packetBytes = SerializationUtils.serialize(integrityPacket);
 
-                // 5. Criar e enviar o pacote UDP
-                DatagramPacket packet = new DatagramPacket(
-                        packetBytes,
-                        packetBytes.length,
-                        serverAddress,
-                        edgePort
-                );
+                for(int targetPort : edgePorts) {
+                    try {
+                        // 5. Criar e enviar o pacote UDP
+                        DatagramPacket packet = new DatagramPacket(
+                                packetBytes,
+                                packetBytes.length,
+                                serverAddress,
+                                targetPort
+                        );
+                        udpSocket.send(packet);
+                        System.out.println("[" + id + "] Dados enviados para a porta " + targetPort + ": " + record.toString());
+                    } catch (IOException e) {
+                        System.err.println("Falha ao enviar para réplica " + targetPort + " (Ignorado pelo SMR)");
+                    }
+                }
 
-                udpSocket.send(packet);
-                System.out.println("[" + id + "] Dados enviados: " + record.toString());
-
-                // 4. Aguardar 2 a 3 segundos (2000ms a 3000ms)
+                // 6. Aguardar 2 a 3 segundos (2000ms a 3000ms)
                 int sleepTime = 2000 + random.nextInt(1001); // 2000 + (0 a 1000)
                 Thread.sleep(sleepTime);
             }

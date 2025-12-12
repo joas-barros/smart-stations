@@ -18,6 +18,11 @@ public class ImplDatabaseService extends UnicastRemoteObject implements IDatabas
 
     @Override
     public void saveRecord(ClimateRecord record) throws RemoteException {
+        if (climateRecords.containsKey(record.getId())) {
+            System.err.println("[DB] Registro duplicado ignorado (SMR): " + record.getId());
+            return; // Retorna sem fazer nada, mas para quem chamou, é como se tivesse salvo
+        }
+
         climateRecords.put(record.getId(), record);
         System.out.println("[DB] Registro " + record.getId() + " persistido. Total: " + climateRecords.size());
     }
