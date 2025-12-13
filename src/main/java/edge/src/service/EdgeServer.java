@@ -15,9 +15,7 @@ import java.text.DecimalFormat;
 
 public class EdgeServer {
 
-
     private static final int BUFFER_SIZE = 4096;
-
     private static final double MAX_TEMP = 42.0;
     private static final double MAX_CO2 = 1000.0;
     private static final double MAX_UV = 10.0;

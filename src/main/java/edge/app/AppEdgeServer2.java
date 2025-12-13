@@ -5,7 +5,7 @@ import edge.src.service.EdgeServer;
 public class AppEdgeServer2 {
     private static final int EDGE_PORT = 9091;
 
-    static void main() {
+    public static void main(String[] args) {
         new EdgeServer(EDGE_PORT);
     }
 }
