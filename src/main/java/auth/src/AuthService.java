@@ -6,12 +6,13 @@ import java.io.PrintStream;
 import java.net.ConnectException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class AuthService {
     // map thread-safe para armazenar as portas de cada serviço
-    public Map<String, Integer> storagePorts = new ConcurrentHashMap<>();
+    public Map<String, List<Integer>> storagePorts = new ConcurrentHashMap<>();
 
     ServerSocket serverSocket;
     Socket client;

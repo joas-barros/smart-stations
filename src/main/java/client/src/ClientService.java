@@ -2,6 +2,8 @@ package client.src;
 
 import datacenter.app.AppDataCenter;
 import datacenter.src.service.IDataCenterService;
+import device.src.model.IntegrityPacket;
+import device.src.util.SerializationUtils;
 import discovery.app.AppDiscovery;
 
 import java.io.BufferedReader;
@@ -16,6 +18,24 @@ public class ClientService {
 
     public ClientService() {
         this.run();
+    }
+
+    private static void processResponse(IntegrityPacket packet) {
+        if (packet.isValid()) {
+            try {
+                // Desembrulha os bytes de volta para String
+                String report = (String) SerializationUtils.deserialize(packet.getData());
+                System.out.println(report);
+            } catch (Exception e) {
+                System.err.println("[ERRO] Falha ao ler conteúdo do pacote: " + e.getMessage());
+            }
+        } else {
+            System.err.println("==============================================");
+            System.err.println("[ALERTA] INTEGRIDADE COMPROMETIDA!");
+            System.err.println("O relatório recebido foi corrompido durante a transmissão.");
+            System.err.println("Checksum calculado não confere com o recebido.");
+            System.err.println("==============================================");
+        }
     }
 
     public void run(){
@@ -94,32 +114,32 @@ public class ClientService {
                 switch (input) {
                     case "1":
                         System.out.println("\n--- SOLICITANDO ANÁLISE AO DATA CENTER ---");
-                        String aqiReport = service.getAirQualityReport();
-                        System.out.println(aqiReport);
+                        IntegrityPacket packet1 = service.getAirQualityReport();
+                        processResponse(packet1);
                         break;
 
                     case "2":
                         System.out.println("\n--- VERIFICANDO ALERTAS DE RISCO ---");
-                        String healthReport = service.getHealthAlerts();
-                        System.out.println(healthReport);
+                        IntegrityPacket packet2 = service.getHealthAlerts();
+                        processResponse(packet2);
                         break;
 
                     case "3":
                         System.out.println("\n--- SOLICITANDO RELATÓRIO DE POLUIÇÃO SONORA ---");
-                        String noiseReport = service.getNoisePollutionReport();
-                        System.out.println(noiseReport);
+                        IntegrityPacket packet3 = service.getNoisePollutionReport();
+                        processResponse(packet3);
                         break;
 
                     case "4":
                         System.out.println("\n--- GERANDO RELATÓRIO DE CONFORTO TÉRMICO ---");
-                        String thermalReport = service.generateThermalComfortReport();
-                        System.out.println(thermalReport);
+                        IntegrityPacket packet4 = service.generateThermalComfortReport();
+                        processResponse(packet4);
                         break;
 
                     case "5":
                         System.out.println("\n--- GERANDO RANKING DE TEMPERATURAS ---");
-                        String tempRanking = service.generateTemperatureRanking();
-                        System.out.println(tempRanking);
+                        IntegrityPacket packet5 = service.generateTemperatureRanking();
+                        processResponse(packet5);
                         break;
 
                     case "0":

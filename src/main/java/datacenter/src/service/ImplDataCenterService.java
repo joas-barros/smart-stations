@@ -1,9 +1,11 @@
 package datacenter.src.service;
 
 import auth.app.AppAuth;
-import database.app.AppRemoteDatabase;
+import database.app.common.CommomDatabase;
 import database.src.service.IDatabaseService;
 import device.src.model.ClimateRecord;
+import device.src.model.IntegrityPacket;
+import device.src.util.SerializationUtils;
 
 import java.io.*;
 import java.net.MalformedURLException;
@@ -32,6 +34,17 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
 
     private static final String AUTH_SERVER_HOST = "localhost";
 
+    private IntegrityPacket createPacket(String reportData) throws RemoteException {
+        try {
+            // 1. Serializa a String do relatório para bytes
+            byte[] dataBytes = SerializationUtils.serialize(reportData);
+            // 2. Cria o pacote
+            return new IntegrityPacket(dataBytes);
+        } catch (IOException e) {
+            throw new RemoteException("Erro ao serializar resposta no servidor", e);
+        }
+    }
+
     @Override
     public void registerWithAuthServer() throws RemoteException {
         System.out.println("[INIT] Tentando registrar no Servidor de Autenticação...");
@@ -58,13 +71,28 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
     @Override
     public void connectToDatabase() throws RemoteException {
         System.out.println("[INIT] Buscando Banco de Dados Remoto...");
+
+        List<Integer> dbPorts = CommomDatabase.AVAILABLE_PORTS;
         while (databaseService == null) {
-            try {
-                // Tenta buscar o serviço na porta 1099
-                databaseService = (IDatabaseService) Naming.lookup("rmi://localhost:" + AppRemoteDatabase.PORT + "/" + AppRemoteDatabase.SERVICE_NAME);
-                System.out.println("[INIT] Conexão estabelecida com o Banco de Dados.");
-            } catch (Exception e) {
-                System.out.println("[INIT] Banco de Dados indisponível.");
+            for (Integer port : dbPorts) {
+                try {
+                    databaseService = (IDatabaseService)
+                            Naming.lookup("rmi://localhost:" + port + "/" + CommomDatabase.SERVICE_NAME);
+
+                    databaseService.setAsLeader(); // Avisa a réplica: "Agora você manda aqui!"
+                    System.out.println("[INIT] Conectado ao Banco de Dados na porta " + port);
+                    break;
+                } catch (Exception e) {
+                    System.err.println("[INIT] [AVISO] Banco de Dados na porta " + port + " indisponível.");
+                }
+            }
+            if (databaseService == null) {
+                System.out.println("[AVISO] Nenhum DB encontrado. Tentando novamente em 2s...");
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
             }
         }
     }
@@ -100,58 +128,105 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
         try (ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
              ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream())) {
 
-            // Recebe
-            ClimateRecord record = (ClimateRecord) in.readObject();
 
-            // Persiste
-            if (databaseService != null) {
-                databaseService.saveRecord(record);
-                System.out.println("[DATA] Registro " + record.getId() + " salvo no DB.");
-            } else {
-                System.err.println("[ERRO] DB desconectado. Dados perdidos.");
+            // 1. Recebe o objeto
+            Object receivedObj = in.readObject();
+            if (receivedObj instanceof IntegrityPacket) {
+                IntegrityPacket packet = (IntegrityPacket) receivedObj;
+
+                // 2. Valida
+                if (packet.isValid()) {
+                    ClimateRecord record = (ClimateRecord) SerializationUtils.deserialize(packet.getData());
+
+                    // Salva no DB...
+                    if (databaseService != null) {
+                        try {
+                            databaseService.saveRecord(record);
+                        } catch (RemoteException e) {
+                            System.err.println("[DATACENTER] Conexão com DB perdida! Tentando reconectar...");
+                            this.databaseService = null;
+                            connectToDatabase(); // Tenta achar um novo líder (um dos backups)
+                            if (databaseService != null) {
+                                databaseService.saveRecord(record); // Tenta salvar de novo
+                            }
+                        }
+                        System.out.println("[DATA] Registro salvo e verificado (CRC OK).");
+                    }
+                    out.writeObject("ACK");
+                } else {
+                    System.err.println("[ERRO] Checksum inválido no Datacenter.");
+                    out.writeObject("NACK_CHECKSUM_ERROR");
+                }
             }
-
-            // 3. Confirma
-            out.writeObject("ACK");
 
         } catch (Exception e) {
             System.err.println("[TCP] Erro na transmissão com Edge: " + e.getMessage());
         }
     }
 
+    // Método auxiliar para garantir leitura segura (Failover)
+    private List<ClimateRecord> getRecordsSafe() throws RemoteException {
+        if (databaseService == null) {
+            connectToDatabase();
+        }
+
+        try {
+            return databaseService.getRecords();
+        }  catch (RemoteException e) {
+            System.err.println("[DATACENTER] Falha ao ler do Banco de Dados. Tentando reconectar...");
+            this.databaseService = null;
+            connectToDatabase(); // Tenta achar um novo líder (um dos backups)
+            if (databaseService != null) {
+                return databaseService.getRecords(); // Tenta buscar de novo
+            } else {
+                throw new RemoteException("Banco de dados indisponível. Não foi possível gerar o relatório.");
+            }
+        }
+    }
+
 
     @Override
-    public String getAirQualityReport() throws RemoteException {
-        List<ClimateRecord> data = databaseService.getRecords();
+    public IntegrityPacket getAirQualityReport() throws RemoteException {
+        List<ClimateRecord> data = getRecordsSafe();
         System.out.println("[RMI] Gerando relatório de qualidade do ar...");
-        return aiService.generateAirQualityReport(data);
+        String report = aiService.generateAirQualityReport(data);
+
+        return createPacket(report);
     }
 
     @Override
-    public String getHealthAlerts() throws RemoteException {
-        List<ClimateRecord> data = databaseService.getRecords();
+    public IntegrityPacket getHealthAlerts() throws RemoteException {
+        List<ClimateRecord> data = getRecordsSafe();
         System.out.println("[RMI] Gerando alertas de saúde...");
-        return aiService.generateHealthAlerts(data);
+        String report = aiService.generateHealthAlerts(data);
+
+        return createPacket(report);
     }
 
     @Override
-    public String getNoisePollutionReport() throws RemoteException {
-        List<ClimateRecord> data = databaseService.getRecords();
+    public IntegrityPacket getNoisePollutionReport() throws RemoteException {
+        List<ClimateRecord> data = getRecordsSafe();
         System.out.println("[RMI] Gerando relatório de poluição sonora...");
-        return aiService.generateNoisePollutionReport(data);
+        String report = aiService.generateNoisePollutionReport(data);
+
+        return createPacket(report);
     }
 
     @Override
-    public String generateThermalComfortReport() throws RemoteException {
-        List<ClimateRecord> data = databaseService.getRecords();
+    public IntegrityPacket generateThermalComfortReport() throws RemoteException {
+        List<ClimateRecord> data = getRecordsSafe();
         System.out.println("[RMI] Gerando relatório de conforto térmico...");
-        return aiService.generateThermalComfortReport(data);
+        String report = aiService.generateThermalComfortReport(data);
+
+        return createPacket(report);
     }
 
     @Override
-    public String generateTemperatureRanking() throws RemoteException {
-        List<ClimateRecord> data = databaseService.getRecords();
+    public IntegrityPacket generateTemperatureRanking() throws RemoteException {
+        List<ClimateRecord> data = getRecordsSafe();
         System.out.println("[RMI] Gerando ranking de temperaturas...");
-        return aiService.generateTemperatureRanking(data);
+        String report = aiService.generateTemperatureRanking(data);
+
+        return createPacket(report);
     }
 }

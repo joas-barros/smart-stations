@@ -41,11 +41,11 @@ public class AIService {
         long dryAirCount = records.stream().filter(r -> r.getHumidity() < 20).count();
 
         if (highTempCount > 5) {
-            alerts.append("⚠️ ALERTA: Onda de calor detectada. Risco de desidratação em idosos.\n");
+            alerts.append("ALERTA: Onda de calor detectada. Risco de desidratação em idosos.\n");
             alertFound = true;
         }
         if (dryAirCount > 5) {
-            alerts.append("⚠️ ALERTA: Baixa umidade persistente. Risco de doenças respiratórias.\n");
+            alerts.append("ALERTA: Baixa umidade persistente. Risco de doenças respiratórias.\n");
             alertFound = true;
         }
 

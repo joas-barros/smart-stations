@@ -2,6 +2,8 @@ package edge.src.service;
 
 import auth.app.AppAuth;
 import device.src.model.ClimateRecord;
+import device.src.model.IntegrityPacket;
+import device.src.util.SerializationUtils;
 import edge.src.model.LocalDatabase;
 
 import java.io.*;
@@ -13,9 +15,7 @@ import java.text.DecimalFormat;
 
 public class EdgeServer {
 
-
     private static final int BUFFER_SIZE = 4096;
-
     private static final double MAX_TEMP = 42.0;
     private static final double MAX_CO2 = 1000.0;
     private static final double MAX_UV = 10.0;
@@ -47,12 +47,17 @@ public class EdgeServer {
                 socket.receive(packet);
 
                 try {
-                    ByteArrayInputStream byteStream = new ByteArrayInputStream(packet.getData(), 0, packet.getLength());
-                    ObjectInputStream objectStream = new ObjectInputStream(byteStream);
+                    byte[] receivedData = new byte[packet.getLength()];
+                    System.arraycopy(packet.getData(), 0, receivedData, 0, packet.getLength());
 
-                    ClimateRecord record = (ClimateRecord) objectStream.readObject();
+                    IntegrityPacket integrityPacket = (IntegrityPacket) SerializationUtils.deserialize(receivedData);
 
-                    processRecord(record);
+                    if (integrityPacket.isValid()){
+                        ClimateRecord record = (ClimateRecord) SerializationUtils.deserialize(integrityPacket.getData());
+                        processRecord(record);
+                    } else {
+                        System.err.println("[ERRO CRÍTICO] Registro climático corrompido recebido. Descartando...");
+                    }
                 } catch (ClassNotFoundException e) {
 
                     System.err.println("Erro ao desserializar o registro climático: " + e.getMessage());
