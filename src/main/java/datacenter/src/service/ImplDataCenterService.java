@@ -22,7 +22,7 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
     private int myTcpPort;
     private int myHttpPort;
 
-    public ImplDataCenterService(int myTcpPort, int myHttpPort, String myRmiName) throws RemoteException {
+    public ImplDataCenterService(int myTcpPort, int myHttpPort) throws RemoteException {
         this.aiService = new AIService();
         this.myTcpPort = myTcpPort;
         this.myHttpPort = myHttpPort;

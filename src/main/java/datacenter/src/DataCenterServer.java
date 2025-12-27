@@ -7,12 +7,11 @@ public class DataCenterServer {
 
     private int tcpPort;
     private int httpPort;
-    private String myRmiName;
 
-    public DataCenterServer(int tcpPort, int httpPort, String myRmiName) {
+    public DataCenterServer(int tcpPort, int httpPort) {
         this.tcpPort = tcpPort;
         this.httpPort = httpPort;
-        this.myRmiName = myRmiName;
+
         this.run();
     }
 
@@ -20,7 +19,7 @@ public class DataCenterServer {
         try {
             System.out.println("[DATACENTER] Iniciando servidor...");
 
-            IDataCenterService server = new ImplDataCenterService(tcpPort,  httpPort, myRmiName);
+            IDataCenterService server = new ImplDataCenterService(tcpPort,  httpPort);
 
             // ---------------------------------------------------------------
             // ETAPA 1: Registro no Servidor de Autenticação
@@ -40,7 +39,7 @@ public class DataCenterServer {
             // ---------------------------------------------------------------
             // ETAPA 4: Iniciar Servidor http para clientes leves (HTTP)
             // ---------------------------------------------------------------
-            server.startRMIClientService();
+            server.startHttpServer();
         } catch (Exception e) {
             System.err.println("[DATACENTER] Erro ao iniciar servidor.");
         }
