@@ -15,7 +15,9 @@ public class Device implements Runnable{
     private String name;
     private String location;
 
-    private static final String SERVER_HOST = System.getenv().getOrDefault("DISCOVERY_HOST", "localhost");
+    private static final String DISCOVERY_HOST = System.getenv().getOrDefault("DISCOVERY_HOST", "localhost");
+
+    private static final String AUTH_HOST = System.getenv().getOrDefault("AUTH_HOST", "localhost");
 
     private final Random random = new Random();
 
@@ -31,20 +33,35 @@ public class Device implements Runnable{
 
         try {
             int authPort = -1;
-            System.out.println("[" + id + "] Conectando ao Servidor de Descoberta...");
+
 
             // ETAPA 1: Descoberta (TCP)
-            try (Socket discoverySocket = new Socket(SERVER_HOST, AppDiscovery.BASE_PORT);
-                 PrintWriter out = new PrintWriter(discoverySocket.getOutputStream(), true);
-                 BufferedReader in = new BufferedReader(new InputStreamReader(discoverySocket.getInputStream()))) {
+            while (authPort == -1) {
+                System.out.println("[" + id + "] Conectando ao Servidor de Descoberta...");
 
-                // Envia solicitação (protocolo simples: string "AUTH_PORT_REQUEST")
-                out.println("AUTH_PORT_REQUEST");
+                try (Socket discoverySocket = new Socket(DISCOVERY_HOST, AppDiscovery.BASE_PORT);
+                     PrintWriter out = new PrintWriter(discoverySocket.getOutputStream(), true);
+                     BufferedReader in = new BufferedReader(new InputStreamReader(discoverySocket.getInputStream()))) {
 
-                // Recebe a porta
-                String response = in.readLine();
-                authPort = Integer.parseInt(response);
-                System.out.println("[" + id + "] Porta de Autenticação recebida: " + authPort);
+                    // Envia solicitação (protocolo simples: string "AUTH_PORT_REQUEST")
+                    out.println("AUTH_PORT_REQUEST");
+
+                    // Recebe a porta
+                    String response = in.readLine();
+
+                    if (response == null || response.equals("AUTH_PORT_NOT_FOUND")) {
+                        System.err.println("[" + id + "] Nenhum servidor Auth disponível. Aguardando 3s...");
+                        Thread.sleep(3000);
+                    } else {
+                        try {
+                            authPort = Integer.parseInt(response);
+                            System.out.println("[" + id + "] Porta de Autenticação recebida: " + authPort);
+                        } catch (NumberFormatException e) {
+                            System.err.println("[" + id + "] Resposta inválida do Discovery: " + response);
+                            Thread.sleep(3000);
+                        }
+                    }
+                }
             }
 
             int edgePort = -1;
@@ -52,7 +69,7 @@ public class Device implements Runnable{
 
             // ETAPA 2: Autenticação (TCP) -> Obter lista de portas do Servidor de Borda
             List<Integer> edgePorts = new ArrayList<>();
-            try (Socket authSocket = new Socket(SERVER_HOST, authPort);
+            try (Socket authSocket = new Socket(AUTH_HOST, authPort);
                  PrintWriter out = new PrintWriter(authSocket.getOutputStream(), true);
                  BufferedReader in = new BufferedReader(new InputStreamReader(authSocket.getInputStream()))) {
 
@@ -72,7 +89,6 @@ public class Device implements Runnable{
             System.out.println("[" + id + "] Iniciando transmissão UDP para porta " + edgePort);
 
             DatagramSocket udpSocket = new DatagramSocket(); // Socket para enviar dados
-            InetAddress serverAddress = InetAddress.getByName(SERVER_HOST);
 
             long startTime = System.currentTimeMillis();
             long duration = 5 * 60 * 1000; // 5 minutos em milissegundos
@@ -94,6 +110,16 @@ public class Device implements Runnable{
 
                 for(int targetPort : edgePorts) {
                     try {
+                        String targetHost = "localhost";
+
+                        // Se estivermos no Docker (AUTH_HOST não é localhost), usamos os nomes dos containers
+                        if (!AUTH_HOST.equals("localhost")) {
+                            if (targetPort == 9090) targetHost = "edge-1";
+                            else if (targetPort == 9091) targetHost = "edge-2";
+                            else if (targetPort == 9092) targetHost = "edge-3";
+                        }
+
+                        InetAddress serverAddress = InetAddress.getByName(targetHost);
                         // 5. Criar e enviar o pacote UDP
                         DatagramPacket packet = new DatagramPacket(
                                 packetBytes,

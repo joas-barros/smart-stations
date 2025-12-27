@@ -1,0 +1,121 @@
+services:
+  # -------------------------------------------------------
+  # 1. SERVIDOR DE DESCOBERTA (O "DNS" do sistema)
+  # -------------------------------------------------------
+  discovery:
+    build: .
+    environment:
+      - MAIN_CLASS=discovery.app.AppDiscovery
+    ports:
+      - "5000:5000"
+    networks:
+      - smart-net
+
+  # -------------------------------------------------------
+  # 2. SERVIDOR DE AUTENTICAÇÃO
+  # -------------------------------------------------------
+  auth:
+    build: .
+    environment:
+      - MAIN_CLASS=auth.app.AppAuth
+      - DISCOVERY_HOST=discovery  # Conecta no Discovery
+    depends_on:
+      - discovery
+    ports:
+      - "6000:6000"
+    networks:
+      - smart-net
+
+  # -------------------------------------------------------
+  # 3. CLUSTER DE BANCO DE DADOS (Líder + 2 Followers)
+  # -------------------------------------------------------
+  db-cluster:
+    build: .
+    environment:
+      - MAIN_CLASS=database.app.AppDatabaseCluster
+    ports:
+      # Expomos as portas caso você queira inspecionar externamente
+      - "1099:1099"
+      - "1100:1100"
+      - "1200:1200"
+    networks:
+      - smart-net
+
+  # -------------------------------------------------------
+  # 4. DATACENTER (Lógica Central + HTTP + TCP Listener)
+  # -------------------------------------------------------
+  datacenter:
+    build: .
+    environment:
+      - MAIN_CLASS=datacenter.app.AppDataCenter
+      - AUTH_HOST=auth        # Conecta no Auth para se registrar
+      - DB_HOST=db-cluster    # Conecta no Cluster de DB
+    ports:
+      - "9000:9000" # Porta TCP (Recebimento de dados do Edge)
+      - "9001:9001" # Porta HTTP (API para o Cliente)
+    depends_on:
+      - auth
+      - db-cluster
+    networks:
+      - smart-net
+
+  # -------------------------------------------------------
+  # 5. EDGE SERVERS (Réplicas da Borda)
+  # -------------------------------------------------------
+  edge-1:
+    build: .
+    environment:
+      - MAIN_CLASS=edge.app.AppEdgeServer1
+      - AUTH_HOST=auth
+      - DATACENTER_HOST=datacenter
+    depends_on:
+      - auth
+      - datacenter
+    networks:
+      - smart-net
+
+  edge-2:
+    build: .
+    environment:
+      - MAIN_CLASS=edge.app.AppEdgeServer2
+      - AUTH_HOST=auth
+      - DATACENTER_HOST=datacenter
+    depends_on:
+      - auth
+      - datacenter
+    networks:
+      - smart-net
+
+  edge-3:
+    build: .
+    environment:
+      - MAIN_CLASS=edge.app.AppEdgeServer3
+      - AUTH_HOST=auth
+      - DATACENTER_HOST=datacenter
+    depends_on:
+      - auth
+      - datacenter
+    networks:
+      - smart-net
+
+  # -------------------------------------------------------
+  # 6. SIMULAÇÃO DE DISPOSITIVOS (IoT)
+  # -------------------------------------------------------
+  device-sim:
+    build: .
+    environment:
+      - MAIN_CLASS=device.app.AppDevice
+      - DISCOVERY_HOST=discovery # Para pedir porta do Auth
+      - AUTH_HOST=auth         # Para autenticação
+    depends_on:
+      - discovery
+      - edge-1
+      - edge-2
+      - edge-3
+    networks:
+      - smart-net
+
+# Definição da rede interna
+networks:
+  smart-net:
+    driver: bridge

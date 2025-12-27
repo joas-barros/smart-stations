@@ -14,6 +14,8 @@ public class AuthService {
     // map thread-safe para armazenar as portas de cada serviço
     public Map<String, List<Integer>> storagePorts = new ConcurrentHashMap<>();
 
+    private static final String DISCOVERY_HOST = System.getenv().getOrDefault("DISCOVERY_HOST", "localhost");
+
     ServerSocket serverSocket;
     Socket client;
     int port;
@@ -30,19 +32,30 @@ public class AuthService {
             serverSocket = new ServerSocket(port);
             System.out.println("Servidor de autenticacao rodando na porta: " + port);
 
-            // Conecta ao servidor diretorio para solicitar o registro da porta
-            Socket discoverySocket = new Socket("localhost", AppDiscovery.BASE_PORT);
-            System.out.println("Conectado ao servidor de descoberta para registro de porta.");
+            // --- LÓGICA DE RETRY (TENTATIVA) ---
+            boolean registered = false;
 
-            // Envia a mensagem de registro
-            PrintStream out = new PrintStream(discoverySocket.getOutputStream());
-            String registerMessage = "REGISTER " + port;
-            out.println(registerMessage);
-            System.out.println("Mensagem enviada ao servidor de descoberta: " + registerMessage);
+            while (!registered) {
+                try {
+                    // Conecta ao servidor diretorio para solicitar o registro da porta
+                    Socket discoverySocket = new Socket(DISCOVERY_HOST, AppDiscovery.BASE_PORT);
+                    System.out.println("Conectado ao servidor de descoberta para registro de porta.");
 
-            // Após se registrar, fecha a conexão com o servidor diretorio
-            System.out.println("Encerrando conexao com o servidor diretorio...");
-            discoverySocket.close();
+                    // Envia a mensagem de registro
+                    PrintStream out = new PrintStream(discoverySocket.getOutputStream());
+                    String registerMessage = "REGISTER " + port;
+                    out.println(registerMessage);
+                    System.out.println("Mensagem enviada ao servidor de descoberta: " + registerMessage);
+
+                    // Após se registrar, fecha a conexão com o servidor diretorio
+                    System.out.println("Encerrando conexao com o servidor diretorio...");
+                    discoverySocket.close();
+                    registered = true;
+                } catch (Exception e) {
+                    System.err.println("Falha ao conectar no Discovery. Tentando novamente em 2s... (" + e.getMessage() + ")");
+                    Thread.sleep(2000);
+                }
+            }
 
             // Aguarda por conexões de clientes
             while (true) {
