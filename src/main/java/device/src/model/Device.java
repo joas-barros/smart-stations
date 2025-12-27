@@ -68,7 +68,7 @@ public class Device implements Runnable{
             System.out.println("[" + id + "] Conectando ao Servidor de Autenticação...");
 
             // ETAPA 2: Autenticação (TCP) -> Obter lista de portas do Servidor de Borda
-            List<Integer> edgePorts = new ArrayList<>();
+            List<InetSocketAddress> targets = new ArrayList<>(); // Lista de endereços completos
             try (Socket authSocket = new Socket(AUTH_HOST, authPort);
                  PrintWriter out = new PrintWriter(authSocket.getOutputStream(), true);
                  BufferedReader in = new BufferedReader(new InputStreamReader(authSocket.getInputStream()))) {
@@ -78,10 +78,13 @@ public class Device implements Runnable{
                 String response = in.readLine(); // Recebe "9090,9091,9092"
 
                 if (response != null && !response.equals("STORAGE_NOT_FOUND")) {
-                    for (String p : response.split(",")) {
-                        edgePorts.add(Integer.parseInt(p));
+                    for (String entry : response.split(",")) {
+                        String[] parts = entry.split(":");
+                        String host = parts[0];
+                        int port = Integer.parseInt(parts[1]);
+                        targets.add(new InetSocketAddress(host, port));
                     }
-                    System.out.println("[" + id + "] Grupo de Réplicas SMR recebido: " + edgePorts);
+                    System.out.println("[" + id + "] Réplicas recebidas: " + response);
                 }
             }
 
@@ -108,29 +111,23 @@ public class Device implements Runnable{
                 // 4. Serializa o IntegrityPacket para enviar via UDP
                 byte[] packetBytes = SerializationUtils.serialize(integrityPacket);
 
-                for(int targetPort : edgePorts) {
+                for(InetSocketAddress target : targets) {
                     try {
-                        String targetHost = "localhost";
+                        String targetHost = target.getHostString();
+                        int targetPort = target.getPort();
 
-                        // Se estivermos no Docker (AUTH_HOST não é localhost), usamos os nomes dos containers
-                        if (!AUTH_HOST.equals("localhost")) {
-                            if (targetPort == 9090) targetHost = "edge-1";
-                            else if (targetPort == 9091) targetHost = "edge-2";
-                            else if (targetPort == 9092) targetHost = "edge-3";
-                        }
-
-                        InetAddress serverAddress = InetAddress.getByName(targetHost);
-                        // 5. Criar e enviar o pacote UDP
-                        DatagramPacket packet = new DatagramPacket(
+                        // 5. Enviar o pacote UDP para cada réplica do Servidor de Borda
+                        DatagramPacket udpPacket = new DatagramPacket(
                                 packetBytes,
                                 packetBytes.length,
-                                serverAddress,
+                                InetAddress.getByName(targetHost),
                                 targetPort
                         );
-                        udpSocket.send(packet);
-                        System.out.println("[" + id + "] Dados enviados para a porta " + targetPort + ": " + record.toString());
+
+                        udpSocket.send(udpPacket);
+                        System.out.println("Dispositivo " + id + " enviou dados para réplica " + targetPort);
                     } catch (IOException e) {
-                        System.err.println("Falha ao enviar para réplica " + targetPort + " (Ignorado pelo SMR)");
+                        System.err.println("Falha ao enviar para réplica " + target.getPort() + ": " + e.getMessage());
                     }
                 }
 

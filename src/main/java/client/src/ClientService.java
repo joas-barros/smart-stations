@@ -114,7 +114,16 @@ public class ClientService {
             // Recebe a resposta
             String response = in.readLine();
 
-            return Integer.parseInt(response.trim());
+            if (response == null || response.contains("NOT_FOUND") || response.contains("INVALID")) {
+                return -1;
+            }
+
+            if (response.contains(":")) {
+                String[] parts = response.split(":");
+                return Integer.parseInt(parts[1].trim());
+            } else {
+                return Integer.parseInt(response.trim());
+            }
 
         } catch (Exception e) {
             System.err.println("[REDE] Erro ao comunicar com " + host + ":" + port + " - " + e.getMessage());

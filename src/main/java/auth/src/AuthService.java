@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class AuthService {
     // map thread-safe para armazenar as portas de cada serviço
-    public Map<String, List<Integer>> storagePorts = new ConcurrentHashMap<>();
+    public Map<String, List<String>> storagePorts = new ConcurrentHashMap<>();
 
     private static final String DISCOVERY_HOST = System.getenv().getOrDefault("DISCOVERY_HOST", "localhost");
 
