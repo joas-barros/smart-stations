@@ -15,10 +15,9 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.rmi.Naming;
 import java.rmi.RemoteException;
-import java.rmi.server.UnicastRemoteObject;
 import java.util.List;
 
-public class ImplDataCenterService extends UnicastRemoteObject implements IDataCenterService{
+public class ImplDataCenterService implements IDataCenterService{
 
     private IDatabaseService databaseService;
     private AIService aiService;
@@ -31,7 +30,7 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
         this.myHttpPort = myHttpPort;
     }
 
-    private static final String AUTH_SERVER_HOST = "localhost";
+    private static final String AUTH_SERVER_HOST = System.getenv().getOrDefault("AUTH_HOST", "localhost");
 
     private IntegrityPacket createPacket(String reportData) throws RemoteException {
         try {
@@ -75,8 +74,9 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
         while (databaseService == null) {
             for (Integer port : dbPorts) {
                 try {
+                    String dbHost = System.getenv().getOrDefault("DB_HOST", "localhost");
                     databaseService = (IDatabaseService)
-                            Naming.lookup("rmi://localhost:" + port + "/" + CommomDatabase.SERVICE_NAME);
+                            Naming.lookup("rmi://" + dbHost + ":" + port + "/" + CommomDatabase.SERVICE_NAME);
 
                     databaseService.setAsLeader(); // Avisa a réplica: "Agora você manda aqui!"
                     System.out.println("[INIT] Conectado ao Banco de Dados na porta " + port);

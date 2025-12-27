@@ -15,7 +15,7 @@ public class Device implements Runnable{
     private String name;
     private String location;
 
-    private static final String SERVER_HOST = "localhost";
+    private static final String SERVER_HOST = System.getenv().getOrDefault("DISCOVERY_HOST", "localhost");
 
     private final Random random = new Random();
 
