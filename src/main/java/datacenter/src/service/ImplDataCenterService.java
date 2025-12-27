@@ -1,13 +1,16 @@
 package datacenter.src.service;
 
 import auth.app.AppAuth;
+import com.sun.net.httpserver.HttpServer;
 import database.app.common.CommomDatabase;
 import database.src.service.IDatabaseService;
+import datacenter.src.util.GenericHandler;
 import device.src.model.ClimateRecord;
 import device.src.model.IntegrityPacket;
 import device.src.util.SerializationUtils;
 
 import java.io.*;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.rmi.Naming;
@@ -94,7 +97,23 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
     }
 
     public void startHttpServer() {
+        try {
+            HttpServer httpServer = HttpServer.create(new InetSocketAddress(myHttpPort), 0);
+            System.out.println("[HTTP] Servidor HTTP iniciado na porta " + myHttpPort);
 
+            // Registra os handlers para cada endpoint
+            httpServer.createContext("/api/air-quality", new GenericHandler(this, "air"));
+            httpServer.createContext("/api/health-alerts", new GenericHandler(this, "health"));
+            httpServer.createContext("/api/noise-pollution", new GenericHandler(this, "noise"));
+            httpServer.createContext("/api/thermal-comfort", new GenericHandler(this, "thermal"));
+            httpServer.createContext("/api/temperature-ranking", new GenericHandler(this, "ranking"));
+
+            httpServer.setExecutor(null);
+            httpServer.start();
+        } catch (IOException e) {
+            System.err.println("[HTTP] Erro ao iniciar servidor HTTP: " + e.getMessage());
+            return;
+        }
     }
 
     @Override
