@@ -1,7 +1,5 @@
 package client.src;
 
-import datacenter.app.AppDataCenter;
-import datacenter.src.service.IDataCenterService;
 import device.src.model.IntegrityPacket;
 import device.src.util.SerializationUtils;
 import discovery.app.AppDiscovery;
@@ -10,15 +8,17 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.net.URI;
 import java.net.http.HttpClient;
-import java.rmi.Naming;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Scanner;
 
 public class ClientService {
     private static String HOST = "localhost";
-    private int dataCenterPort;
-    private HttpClient httpClient;
+    private static int dataCenterPort;
+    private static HttpClient httpClient;
 
     public ClientService() {
         this.httpClient = HttpClient.newBuilder()
@@ -26,6 +26,32 @@ public class ClientService {
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
         this.run();
+    }
+
+    private static IntegrityPacket requestData(String endpoint) {
+        try {
+            String url = "http://" + HOST + ":" + dataCenterPort + "/api/" + endpoint;
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .GET()
+                    .uri(URI.create(url))
+                    .build();
+
+            System.out.println("[HTTP] Enviando requisição para " + url);
+
+            HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+
+            if (response.statusCode() == 200) {
+                byte[] responseBody = response.body();
+                return (IntegrityPacket) SerializationUtils.deserialize(responseBody);
+            } else {
+                System.err.println("[HTTP] Erro na resposta do servidor: Código " + response.statusCode());
+                return null;
+            }
+        } catch (Exception e) {
+            System.err.println("[HTTP] Falha na comunicação: " + e.getMessage());
+            return null;
+        }
     }
 
     private static void processResponse(IntegrityPacket packet) {
@@ -61,21 +87,17 @@ public class ClientService {
             System.out.println("[CLIENTE] Servidor de Autenticação localizado na porta: " + authPort);
 
             System.out.println("[CLIENTE] Solicitando endereço do Data Center ao Auth Server...");
-            int dataCenterRmiPort = requestPortViaTcp("localhost", authPort, "GET DATACENTER");
+            int dataCenterPort = requestPortViaTcp("localhost", authPort, "GET DATACENTER");
 
-            if (dataCenterRmiPort == -1) {
+            if (dataCenterPort == -1) {
                 System.err.println("Falha ao localizar Data Center ou serviço offline. Abortando.");
                 return;
             }
-            System.out.println("[CLIENTE] Data Center localizado na porta RMI: " + dataCenterRmiPort);
+            System.out.println("[CLIENTE] Data Center localizado na porta: " + dataCenterPort);
+            this.dataCenterPort = dataCenterPort;
 
-            System.out.println("[CLIENTE] Conectando ao serviço de IA via RMI...");
-
-            String rmiUrl = "rmi://" + HOST + ":" + dataCenterRmiPort + "/" + AppDataCenter.BASE_RMI_NAME;
-            IDataCenterService service = (IDataCenterService) Naming.lookup(rmiUrl);
-
-            System.out.println("[CLIENTE] Conexão estabelecida! Iniciando interface...");
-            showMenu(service);
+            System.out.println("[CLIENTE] Iniciando interface de usuário...");
+            showMenu();
         } catch (Exception e) {
             System.err.println("[ERRO CRÍTICO] " + e.getMessage());
         }
@@ -100,7 +122,7 @@ public class ClientService {
         }
     }
 
-    private static void showMenu(IDataCenterService service) {
+    private static void showMenu() {
         Scanner scanner = new Scanner(System.in);
         boolean running = true;
 
@@ -118,36 +140,34 @@ public class ClientService {
 
             String input = scanner.next(); // Usar String evita crash se digitar letras
 
+            // Mapeamento das opções para os endpoints HTTP
+            IntegrityPacket packet = null;
+
             try {
                 switch (input) {
                     case "1":
                         System.out.println("\n--- SOLICITANDO ANÁLISE AO DATA CENTER ---");
-                        IntegrityPacket packet1 = service.getAirQualityReport();
-                        processResponse(packet1);
+                        packet = requestData("air-quality");
                         break;
 
                     case "2":
                         System.out.println("\n--- VERIFICANDO ALERTAS DE RISCO ---");
-                        IntegrityPacket packet2 = service.getHealthAlerts();
-                        processResponse(packet2);
+                        packet = requestData("health-alerts");
                         break;
 
                     case "3":
                         System.out.println("\n--- SOLICITANDO RELATÓRIO DE POLUIÇÃO SONORA ---");
-                        IntegrityPacket packet3 = service.getNoisePollutionReport();
-                        processResponse(packet3);
+                        packet = requestData("noise-pollution");
                         break;
 
                     case "4":
                         System.out.println("\n--- GERANDO RELATÓRIO DE CONFORTO TÉRMICO ---");
-                        IntegrityPacket packet4 = service.generateThermalComfortReport();
-                        processResponse(packet4);
+                        packet = requestData("thermal-comfort");
                         break;
 
                     case "5":
                         System.out.println("\n--- GERANDO RANKING DE TEMPERATURAS ---");
-                        IntegrityPacket packet5 = service.generateTemperatureRanking();
-                        processResponse(packet5);
+                        packet = requestData("temperature-ranking");
                         break;
 
                     case "0":
@@ -157,6 +177,10 @@ public class ClientService {
 
                     default:
                         System.out.println("Opção inválida. Tente novamente.");
+                }
+
+                if (packet != null) {
+                    processResponse(packet);
                 }
             } catch (Exception e) {
                 System.err.println("Erro ao comunicar com o servidor: " + e.getMessage());
