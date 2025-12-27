@@ -159,7 +159,7 @@ public class ImplDataCenterService implements IDataCenterService{
                                 databaseService.saveRecord(record); // Tenta salvar de novo
                             }
                         }
-                        System.out.println("[DATA] Registro salvo e verificado (CRC OK).");
+                        System.out.println("[DATA] Registro [" + record.getId() + "] salvo e verificado (CRC OK).");
                     }
                     out.writeObject("ACK");
                 } else {

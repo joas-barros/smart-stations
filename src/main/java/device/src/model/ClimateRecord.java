@@ -159,22 +159,32 @@ public class ClimateRecord implements Serializable {
 
     @Override
     public String toString() {
-        return "ClimateRecord{" +
-                "id=" + id +
-                ", deviceId='" + deviceId + '\'' +
-                ", timeStamp=" + timeStamp +
-                ", carbonDioxide=" + carbonDioxide +
-                ", carbonMonoxide=" + carbonMonoxide +
-                ", nitrogenDioxide=" + nitrogenDioxide +
-                ", sulfurDioxide=" + sulfurDioxide +
-                ", pm25=" + pm25 +
-                ", pm10=" + pm10 +
-                ", humidity=" + humidity +
-                ", temperature=" + temperature +
-                ", urbanNoise=" + urbanNoise +
-                ", uvRadiation=" + uvRadiation +
-                '}';
+        return """
+        ClimateRecord
+        ├─ Id: %d
+        ├─ Device ID: %s
+        ├─ Timestamp: %s
+        ├─ Gases
+        │  ├─ CO₂: %.2f
+        │  ├─ CO: %.2f
+        │  ├─ NO₂: %.2f
+        │  └─ SO₂: %.2f
+        ├─ Partículas
+        │  ├─ PM2.5: %.2f
+        │  └─ PM10: %.2f
+        ├─ Ambiente
+        │  ├─ Umidade: %.2f %%
+        │  ├─ Temperatura: %.2f °C
+        │  ├─ Ruído Urbano: %.2f dB
+        │  └─ Radiação UV: %.2f
+        """.formatted(
+                id, deviceId, timeStamp,
+                carbonDioxide, carbonMonoxide, nitrogenDioxide, sulfurDioxide,
+                pm25, pm10,
+                humidity, temperature, urbanNoise, uvRadiation
+        );
     }
+
 
     public String getLocation() {
         return location;

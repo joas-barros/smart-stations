@@ -126,6 +126,7 @@ public class Device implements Runnable{
 
                         udpSocket.send(udpPacket);
                         System.out.println("Dispositivo " + id + " enviou dados para réplica " + targetPort);
+                        System.out.println("  Dados: " + record.toString());
                     } catch (IOException e) {
                         System.err.println("Falha ao enviar para réplica " + target.getPort() + ": " + e.getMessage());
                     }
