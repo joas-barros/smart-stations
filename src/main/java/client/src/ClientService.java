@@ -10,13 +10,21 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.net.http.HttpClient;
 import java.rmi.Naming;
+import java.time.Duration;
 import java.util.Scanner;
 
 public class ClientService {
     private static String HOST = "localhost";
+    private int dataCenterPort;
+    private HttpClient httpClient;
 
     public ClientService() {
+        this.httpClient = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
+                .connectTimeout(Duration.ofSeconds(10))
+                .build();
         this.run();
     }
 
