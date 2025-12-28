@@ -74,7 +74,7 @@ public class ImplDataCenterService implements IDataCenterService{
         while (databaseService == null) {
             for (Integer port : dbPorts) {
                 try {
-                    String dbHost = System.getenv().getOrDefault("DB_HOST", "localhost");
+                    String dbHost = CommomDatabase.DB_TOPOLOGY.get(port);
                     databaseService = (IDatabaseService)
                             Naming.lookup("rmi://" + dbHost + ":" + port + "/" + CommomDatabase.SERVICE_NAME);
 

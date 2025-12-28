@@ -29,14 +29,38 @@ services:
   # -------------------------------------------------------
   # 3. CLUSTER DE BANCO DE DADOS (Líder + 2 Followers)
   # -------------------------------------------------------
-  db-cluster:
+  db-leader:
     build: .
     environment:
-      - MAIN_CLASS=database.app.AppDatabaseCluster
+      - MAIN_CLASS=database.app.AppRemoteDatabaseLeader
+      - DB_HOST_LEADER=db-leader
+      - DB_HOST_FOLLOWER1=db-follower-1
+      - DB_HOST_FOLLOWER2=db-follower-2
     ports:
-      # Expomos as portas caso você queira inspecionar externamente
       - "1099:1099"
+    networks:
+      - smart-net
+
+  db-follower-1:
+    build: .
+    environment:
+      - MAIN_CLASS=database.app.AppRemoteDatabaseFollower1
+      - DB_HOST_LEADER=db-leader
+      - DB_HOST_FOLLOWER1=db-follower-1
+      - DB_HOST_FOLLOWER2=db-follower-2
+    ports:
       - "1100:1100"
+    networks:
+      - smart-net
+
+  db-follower-2:
+    build: .
+    environment:
+      - MAIN_CLASS=database.app.AppRemoteDatabaseFollower2
+      - DB_HOST_LEADER=db-leader
+      - DB_HOST_FOLLOWER1=db-follower-1
+      - DB_HOST_FOLLOWER2=db-follower-2
+    ports:
       - "1200:1200"
     networks:
       - smart-net
@@ -49,13 +73,14 @@ services:
     environment:
       - MAIN_CLASS=datacenter.app.AppDataCenter
       - AUTH_HOST=auth        # Conecta no Auth para se registrar
-      - DB_HOST=db-cluster    # Conecta no Cluster de DB
+      - DB_HOST_LEADER=db-leader   # Conecta no DB Líder
+      - DB_HOST_FOLLOWER1=db-follower-1 # Conecta no DB Follower 1
+      - DB_HOST_FOLLOWER2=db-follower-2 # Conecta no DB Follower 2
     ports:
       - "9000:9000" # Porta TCP (Recebimento de dados do Edge)
       - "9001:9001" # Porta HTTP (API para o Cliente)
     depends_on:
       - auth
-      - db-cluster
     networks:
       - smart-net
 

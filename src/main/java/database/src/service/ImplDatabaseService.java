@@ -1,5 +1,6 @@
 package database.src.service;
 
+import database.app.common.CommomDatabase;
 import device.src.model.ClimateRecord;
 
 import java.rmi.Naming;
@@ -42,11 +43,14 @@ public class ImplDatabaseService extends UnicastRemoteObject implements IDatabas
     }
 
     private void propagateToBackups(ClimateRecord record) {
+
         for (Integer port : backupPorts) {
             try {
                 if (port == currentPort) continue; // Pula a porta do próprio líder
+
+                String dbHost = CommomDatabase.DB_TOPOLOGY.get(port);
                 IDatabaseService backupService = (IDatabaseService)
-                        Naming.lookup("rmi://localhost:" + port + "/ClimateDB");
+                        Naming.lookup("rmi://" + dbHost + ":" + port + "/" + CommomDatabase.SERVICE_NAME);
                 backupService.syncRecord(record);
                 System.out.println("[DB] Registro " + record.getId() + " sincronizado com backup na porta " + port);
             }  catch (Exception e) {
