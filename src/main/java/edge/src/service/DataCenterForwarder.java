@@ -13,7 +13,7 @@ import java.net.UnknownHostException;
 
 public class DataCenterForwarder implements Runnable {
 
-    private static final String DATACENTER_HOST = "localhost";
+    private static final String DATACENTER_HOST = System.getenv().getOrDefault("DATACENTER_HOST", "localhost");
 
     private ClimateRecord record;
 

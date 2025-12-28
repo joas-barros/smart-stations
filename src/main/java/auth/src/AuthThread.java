@@ -10,10 +10,10 @@ import java.util.Map;
 
 public class AuthThread implements Runnable {
 
-    private Map<String, List<Integer>> storagePorts;
+    private Map<String, List<String>> storagePorts;
     private Socket clientSocket;
 
-    public AuthThread(Socket clientSocket, Map<String, List<Integer>> storagePorts) {
+    public AuthThread(Socket clientSocket, Map<String, List<String>> storagePorts) {
         this.clientSocket = clientSocket;
         this.storagePorts = storagePorts;
     }
@@ -33,11 +33,16 @@ public class AuthThread implements Runnable {
             if (request.startsWith("REGISTER")) {
                 String[] parts = request.split(" ");
                 String serviceType = parts[1];
-                int port = Integer.parseInt(parts[2]);
+                String port = parts[2];
+
+                String remoteIp = clientSocket.getInetAddress().getHostAddress();
+
+                // Formata o endereço como "IP:PORTA"
+                String addressEntry = remoteIp + ":" + port;
 
                 // Adiciona a porta do servidor de armazenamento ao mapa
-                storagePorts.computeIfAbsent(serviceType, k -> new ArrayList<>()).add(port);
-                System.out.println("Servidor de armazenamento " + serviceType + " registrado na porta: " + port);
+                storagePorts.computeIfAbsent(serviceType, k -> new ArrayList<>()).add(addressEntry);
+                System.out.println("Servidor de armazenamento " + serviceType + " registrado na porta: " + addressEntry);
 
                 // Envia confirmação ao cliente
                 out.println("REGISTERED");
@@ -46,16 +51,13 @@ public class AuthThread implements Runnable {
                 String serviceType = parts[1];
 
                 // Recupera a porta do servidor de armazenamento solicitado
-                List<Integer> ports = storagePorts.get(serviceType);
-                if (ports != null && !ports.isEmpty()) {
+                List<String> addresses = storagePorts.get(serviceType);
+
+                if (addresses != null && !addresses.isEmpty()) {
                     // [SMR] Retorna todas as portas separadas por vírgula (ex: "9090,9091,9092")
-                    StringBuilder sb = new StringBuilder();
-                    for (int i = 0; i < ports.size(); i++) {
-                        sb.append(ports.get(i));
-                        if (i < ports.size() - 1) sb.append(",");
-                    }
-                    out.println(sb.toString());
-                    System.out.println("Enviada lista de réplicas " + serviceType + ": " + sb);
+                    String response = String.join(",", addresses);
+                    out.println(response);
+                    System.out.println("Enviada lista de réplicas " + serviceType + ": " + response);
                 } else {
                     out.println("STORAGE_NOT_FOUND");
                     System.out.println("Servidor de armazenamento " + serviceType + " não encontrado.");

@@ -6,13 +6,12 @@ import datacenter.src.service.ImplDataCenterService;
 public class DataCenterServer {
 
     private int tcpPort;
-    private int rmiPort;
-    private String myRmiName;
+    private int httpPort;
 
-    public DataCenterServer(int tcpPort, int rmiPort, String myRmiName) {
+    public DataCenterServer(int tcpPort, int httpPort) {
         this.tcpPort = tcpPort;
-        this.rmiPort = rmiPort;
-        this.myRmiName = myRmiName;
+        this.httpPort = httpPort;
+
         this.run();
     }
 
@@ -20,7 +19,7 @@ public class DataCenterServer {
         try {
             System.out.println("[DATACENTER] Iniciando servidor...");
 
-            IDataCenterService server = new ImplDataCenterService(tcpPort,  rmiPort, myRmiName);
+            IDataCenterService server = new ImplDataCenterService(tcpPort,  httpPort);
 
             // ---------------------------------------------------------------
             // ETAPA 1: Registro no Servidor de Autenticação
@@ -33,14 +32,14 @@ public class DataCenterServer {
             server.connectToDatabase();
 
             // ---------------------------------------------------------------
-            // ETAPA 3: Disponibilizar Serviços para Clientes (RPC/RMI)
-            // ---------------------------------------------------------------
-            server.startRMIClientService();
-
-            // ---------------------------------------------------------------
-            // ETAPA 4: Iniciar Recepção de Dados do Edge (TCP)
+            // ETAPA 3: Iniciar Recepção de Dados do Edge (TCP)
             // ---------------------------------------------------------------
             server.startEdgeListener();
+
+            // ---------------------------------------------------------------
+            // ETAPA 4: Iniciar Servidor http para clientes leves (HTTP)
+            // ---------------------------------------------------------------
+            server.startHttpServer();
         } catch (Exception e) {
             System.err.println("[DATACENTER] Erro ao iniciar servidor.");
         }

@@ -15,7 +15,9 @@ public class Device implements Runnable{
     private String name;
     private String location;
 
-    private static final String SERVER_HOST = "localhost";
+    private static final String DISCOVERY_HOST = System.getenv().getOrDefault("DISCOVERY_HOST", "localhost");
+
+    private static final String AUTH_HOST = System.getenv().getOrDefault("AUTH_HOST", "localhost");
 
     private final Random random = new Random();
 
@@ -31,28 +33,43 @@ public class Device implements Runnable{
 
         try {
             int authPort = -1;
-            System.out.println("[" + id + "] Conectando ao Servidor de Descoberta...");
+
 
             // ETAPA 1: Descoberta (TCP)
-            try (Socket discoverySocket = new Socket(SERVER_HOST, AppDiscovery.BASE_PORT);
-                 PrintWriter out = new PrintWriter(discoverySocket.getOutputStream(), true);
-                 BufferedReader in = new BufferedReader(new InputStreamReader(discoverySocket.getInputStream()))) {
+            while (authPort == -1) {
+                System.out.println("[" + id + "] Conectando ao Servidor de Descoberta...");
 
-                // Envia solicitação (protocolo simples: string "AUTH_PORT_REQUEST")
-                out.println("AUTH_PORT_REQUEST");
+                try (Socket discoverySocket = new Socket(DISCOVERY_HOST, AppDiscovery.BASE_PORT);
+                     PrintWriter out = new PrintWriter(discoverySocket.getOutputStream(), true);
+                     BufferedReader in = new BufferedReader(new InputStreamReader(discoverySocket.getInputStream()))) {
 
-                // Recebe a porta
-                String response = in.readLine();
-                authPort = Integer.parseInt(response);
-                System.out.println("[" + id + "] Porta de Autenticação recebida: " + authPort);
+                    // Envia solicitação (protocolo simples: string "AUTH_PORT_REQUEST")
+                    out.println("AUTH_PORT_REQUEST");
+
+                    // Recebe a porta
+                    String response = in.readLine();
+
+                    if (response == null || response.equals("AUTH_PORT_NOT_FOUND")) {
+                        System.err.println("[" + id + "] Nenhum servidor Auth disponível. Aguardando 3s...");
+                        Thread.sleep(3000);
+                    } else {
+                        try {
+                            authPort = Integer.parseInt(response);
+                            System.out.println("[" + id + "] Porta de Autenticação recebida: " + authPort);
+                        } catch (NumberFormatException e) {
+                            System.err.println("[" + id + "] Resposta inválida do Discovery: " + response);
+                            Thread.sleep(3000);
+                        }
+                    }
+                }
             }
 
             int edgePort = -1;
             System.out.println("[" + id + "] Conectando ao Servidor de Autenticação...");
 
             // ETAPA 2: Autenticação (TCP) -> Obter lista de portas do Servidor de Borda
-            List<Integer> edgePorts = new ArrayList<>();
-            try (Socket authSocket = new Socket(SERVER_HOST, authPort);
+            List<InetSocketAddress> targets = new ArrayList<>(); // Lista de endereços completos
+            try (Socket authSocket = new Socket(AUTH_HOST, authPort);
                  PrintWriter out = new PrintWriter(authSocket.getOutputStream(), true);
                  BufferedReader in = new BufferedReader(new InputStreamReader(authSocket.getInputStream()))) {
 
@@ -61,10 +78,13 @@ public class Device implements Runnable{
                 String response = in.readLine(); // Recebe "9090,9091,9092"
 
                 if (response != null && !response.equals("STORAGE_NOT_FOUND")) {
-                    for (String p : response.split(",")) {
-                        edgePorts.add(Integer.parseInt(p));
+                    for (String entry : response.split(",")) {
+                        String[] parts = entry.split(":");
+                        String host = parts[0];
+                        int port = Integer.parseInt(parts[1]);
+                        targets.add(new InetSocketAddress(host, port));
                     }
-                    System.out.println("[" + id + "] Grupo de Réplicas SMR recebido: " + edgePorts);
+                    System.out.println("[" + id + "] Réplicas recebidas: " + response);
                 }
             }
 
@@ -72,7 +92,6 @@ public class Device implements Runnable{
             System.out.println("[" + id + "] Iniciando transmissão UDP para porta " + edgePort);
 
             DatagramSocket udpSocket = new DatagramSocket(); // Socket para enviar dados
-            InetAddress serverAddress = InetAddress.getByName(SERVER_HOST);
 
             long startTime = System.currentTimeMillis();
             long duration = 5 * 60 * 1000; // 5 minutos em milissegundos
@@ -92,19 +111,24 @@ public class Device implements Runnable{
                 // 4. Serializa o IntegrityPacket para enviar via UDP
                 byte[] packetBytes = SerializationUtils.serialize(integrityPacket);
 
-                for(int targetPort : edgePorts) {
+                for(InetSocketAddress target : targets) {
                     try {
-                        // 5. Criar e enviar o pacote UDP
-                        DatagramPacket packet = new DatagramPacket(
+                        String targetHost = target.getHostString();
+                        int targetPort = target.getPort();
+
+                        // 5. Enviar o pacote UDP para cada réplica do Servidor de Borda
+                        DatagramPacket udpPacket = new DatagramPacket(
                                 packetBytes,
                                 packetBytes.length,
-                                serverAddress,
+                                InetAddress.getByName(targetHost),
                                 targetPort
                         );
-                        udpSocket.send(packet);
-                        System.out.println("[" + id + "] Dados enviados para a porta " + targetPort + ": " + record.toString());
+
+                        udpSocket.send(udpPacket);
+                        System.out.println("Dispositivo " + id + " enviou dados para réplica " + targetPort);
+                        System.out.println("  Dados: " + record.toString());
                     } catch (IOException e) {
-                        System.err.println("Falha ao enviar para réplica " + targetPort + " (Ignorado pelo SMR)");
+                        System.err.println("Falha ao enviar para réplica " + target.getPort() + ": " + e.getMessage());
                     }
                 }
 

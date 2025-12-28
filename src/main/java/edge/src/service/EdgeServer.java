@@ -21,7 +21,7 @@ public class EdgeServer {
     private static final double MAX_UV = 10.0;
     private static final double MAX_NOISE = 90.0;
 
-    private static final String AUTH_SERVER_HOST = "localhost";
+    private static final String AUTH_SERVER_HOST = System.getenv().getOrDefault("AUTH_HOST", "localhost");
 
     private static LocalDatabase database;
     private int port;

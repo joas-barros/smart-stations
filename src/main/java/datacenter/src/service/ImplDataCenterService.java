@@ -1,38 +1,36 @@
 package datacenter.src.service;
 
 import auth.app.AppAuth;
+import com.sun.net.httpserver.HttpServer;
 import database.app.common.CommomDatabase;
 import database.src.service.IDatabaseService;
+import datacenter.src.util.GenericHandler;
 import device.src.model.ClimateRecord;
 import device.src.model.IntegrityPacket;
 import device.src.util.SerializationUtils;
 
 import java.io.*;
-import java.net.MalformedURLException;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.rmi.Naming;
 import java.rmi.RemoteException;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.server.UnicastRemoteObject;
 import java.util.List;
 
-public class ImplDataCenterService extends UnicastRemoteObject implements IDataCenterService{
+public class ImplDataCenterService implements IDataCenterService{
 
     private IDatabaseService databaseService;
     private AIService aiService;
     private int myTcpPort;
-    private int myRmiPort;
-    private String myRmiName;
+    private int myHttpPort;
 
-    public ImplDataCenterService(int myTcpPort, int myRmiPort, String myRmiName) throws RemoteException {
+    public ImplDataCenterService(int myTcpPort, int myHttpPort) throws RemoteException {
         this.aiService = new AIService();
         this.myTcpPort = myTcpPort;
-        this.myRmiPort = myRmiPort;
-        this.myRmiName = myRmiName;
+        this.myHttpPort = myHttpPort;
     }
 
-    private static final String AUTH_SERVER_HOST = "localhost";
+    private static final String AUTH_SERVER_HOST = System.getenv().getOrDefault("AUTH_HOST", "localhost");
 
     private IntegrityPacket createPacket(String reportData) throws RemoteException {
         try {
@@ -46,13 +44,13 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
     }
 
     @Override
-    public void registerWithAuthServer() throws RemoteException {
+    public void registerWithAuthServer() {
         System.out.println("[INIT] Tentando registrar no Servidor de Autenticação...");
         try (Socket socket = new Socket(AUTH_SERVER_HOST, AppAuth.PORT);
              PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
              BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
 
-            String requisicao = "REGISTER DATACENTER " + myRmiPort;
+            String requisicao = "REGISTER DATACENTER " + myHttpPort;
 
             System.out.println("[INIT] Mandando requisição ao Auth Server: " + requisicao);
 
@@ -69,15 +67,16 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
     }
 
     @Override
-    public void connectToDatabase() throws RemoteException {
+    public void connectToDatabase() {
         System.out.println("[INIT] Buscando Banco de Dados Remoto...");
 
         List<Integer> dbPorts = CommomDatabase.AVAILABLE_PORTS;
         while (databaseService == null) {
             for (Integer port : dbPorts) {
                 try {
+                    String dbHost = CommomDatabase.DB_TOPOLOGY.get(port);
                     databaseService = (IDatabaseService)
-                            Naming.lookup("rmi://localhost:" + port + "/" + CommomDatabase.SERVICE_NAME);
+                            Naming.lookup("rmi://" + dbHost + ":" + port + "/" + CommomDatabase.SERVICE_NAME);
 
                     databaseService.setAsLeader(); // Avisa a réplica: "Agora você manda aqui!"
                     System.out.println("[INIT] Conectado ao Banco de Dados na porta " + port);
@@ -97,18 +96,28 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
         }
     }
 
-    public void startRMIClientService() throws RemoteException {
-        LocateRegistry.createRegistry(myRmiPort);
+    public void startHttpServer() {
         try {
-            Naming.rebind("rmi://localhost:" + myRmiPort + "/" + myRmiName, this);
-        } catch (MalformedURLException e) {
-            throw new RuntimeException(e);
+            HttpServer httpServer = HttpServer.create(new InetSocketAddress(myHttpPort), 0);
+            System.out.println("[HTTP] Servidor HTTP iniciado na porta " + myHttpPort);
+
+            // Registra os handlers para cada endpoint
+            httpServer.createContext("/api/air-quality", new GenericHandler(this, "air"));
+            httpServer.createContext("/api/health-alerts", new GenericHandler(this, "health"));
+            httpServer.createContext("/api/noise-pollution", new GenericHandler(this, "noise"));
+            httpServer.createContext("/api/thermal-comfort", new GenericHandler(this, "thermal"));
+            httpServer.createContext("/api/temperature-ranking", new GenericHandler(this, "ranking"));
+
+            httpServer.setExecutor(null);
+            httpServer.start();
+        } catch (IOException e) {
+            System.err.println("[HTTP] Erro ao iniciar servidor HTTP: " + e.getMessage());
+            return;
         }
-        System.out.println("[RMI] Serviço de IA disponível para clientes na porta " + myRmiPort);
     }
 
     @Override
-    public void startEdgeListener() throws RemoteException {
+    public void startEdgeListener() {
         new Thread(() -> {
             try (ServerSocket serverSocket = new ServerSocket(myTcpPort)) {
                 System.out.println("[TCP] Aguardando dados do Edge Server na porta " + myTcpPort);
@@ -150,7 +159,7 @@ public class ImplDataCenterService extends UnicastRemoteObject implements IDataC
                                 databaseService.saveRecord(record); // Tenta salvar de novo
                             }
                         }
-                        System.out.println("[DATA] Registro salvo e verificado (CRC OK).");
+                        System.out.println("[DATA] Registro [" + record.getId() + "] salvo e verificado (CRC OK).");
                     }
                     out.writeObject("ACK");
                 } else {
